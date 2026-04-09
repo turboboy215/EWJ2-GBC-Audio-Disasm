@@ -10,1434 +10,1436 @@ WaveRAM equ $FF30
 
 SECTION "Audio3", ROMX[$4000], BANK[$3]
 
-    jp Init
+	jp Init
 
 
-    jp GetSFXMacro
+	jp GetSFXMacro
 
 
-    jp LoadSong
+	jp LoadSong
 
 
-    jp PlaySongSFX
+	jp PlaySongSFX
 
 
-    jp PlaySong
+	jp PlaySong
 
 
-    jp PlaySFXC1
+	jp PlaySFXC1
 
 
-    jp ClearChVol
+	jp ClearChVol
 
 
-    jp MusicOn
+	jp MusicOn
 
 
-    jp CheckVolR1
+	jp CheckVolR1
 
 
-    jp CheckVolNew
+	jp CheckVolNew
 
 
-    jp ClearAudio
+	jp ClearAudio
 
 
-    jp SetTempo
+	jp SetTempo
 
 
-    jp LoadSFX
+	jp LoadSFX
 
 
 SetTempo:
-    ld [Tempo], a
-    ret
+	ld [Tempo], a
+	ret
 
 
 PlaySongSFX:
-    call PlaySong
-    call PlaySFXC1
-    ret
+	call PlaySong
+	call PlaySFXC1
+	ret
 
 ;Check the volume of the right speaker - if it is too low, then mute
 CheckVolR1:
-    ldh a, [rNR50]
+	ldh a, [rNR50]
 	;If volume is 0, then load 0 into B
-    and %00000111
-    jr z, .CheckVolR10
+	and %00000111
+	jr z, .CheckVolR10
 
 ;Otherwise, decrease and load value into B
-    dec a
-    or %00001000
-    ld b, a
-    jp CheckVolL1
+	dec a
+	or %00001000
+	ld b, a
+	jp CheckVolL1
 
 ;Right volume is 0
 .CheckVolR10
-    ld b, 0
+	ld b, 0
 
 ;Now, check the volume of the left speaker
 CheckVolL1:
-    ldh a, [rNR50]
+	ldh a, [rNR50]
 	;If volume is 0, then load 0 into A
-    and %01110000
-    jr z, .CheckVolL10
+	and %01110000
+	jr z, .CheckVolL10
 
 ;Otherwise, decrease and load value into A
-    sub $10
-    jp CtrlCheck
+	sub $10
+	jp CtrlCheck
 
 
 ;Left volume is 0
 .CheckVolL10
-    ld a, 0
+	ld a, 0
 
 ;Check if the resulting values are 0 or not
 CtrlCheck:
-    or b
-    cp 0
+	or b
+	cp 0
 	;If not 0, then load new value into NR50
-    jr nz, SetMasterVol
+	jr nz, SetMasterVol
 
 	;Otherwise, set values to 0
-    call ClearChVol
+	call ClearChVol
 
 ;Load the value into master volume control
 SetMasterVol:
-    ldh [rNR50], a
-    ret
+	ldh [rNR50], a
+	ret
 
 
 ;Clear all audio
 ClearAudio:
-    xor a
-    ldh [rNR51], a
-    ld [MasterPan], a
-    ldh [rNR50], a
-    ld [PlayFlag], a
-    ret
+	xor a
+	ldh [rNR51], a
+	ld [MasterPan], a
+	ldh [rNR50], a
+	ld [PlayFlag], a
+	ret
 
 
 ;Clear each channel's volume
 ClearChVol:
-    ld a, 0
-    ldh [rNR12], a
-    ldh [rNR22], a
-    ldh [rNR32], a
-    ldh [rNR42], a
-    ld [PlayFlag], a
-    ret
+	ld a, 0
+	ldh [rNR12], a
+	ldh [rNR22], a
+	ldh [rNR32], a
+	ldh [rNR42], a
+	ld [PlayFlag], a
+	ret
 
 
 ;Turn music on
 MusicOn:
-    ld a, $FF
-    ld [PlayFlag], a
-    ret
+	ld a, $FF
+	ld [PlayFlag], a
+	ret
 
 
 ;Check the status of the audio
 CheckVolNew:
 	;Set the music play flag
-    call MusicOn
+	call MusicOn
 	;Check the master volume control
-    ldh a, [rNR50]
-    cp 0
+	ldh a, [rNR50]
+	cp 0
 	;If not 0, then check L and R volumes again
-    jr nz, CheckVolR2
+	jr nz, CheckVolR2
 
 	;Otherwise, set volumes off
-    ld a, %10001000
-    ldh [rNR50], a
-    ret
+	ld a, %10001000
+	ldh [rNR50], a
+	ret
 
 
 ;Check the volume of the right speaker again - if it is not full, then set to max
 CheckVolR2:
-    and %00000111
-    cp %00000111
-    jr z, CheckVolL2
+	and %00000111
+	cp %00000111
+	jr z, CheckVolL2
 
 	;Increase volume
-    add 1
-    ld b, a
+	add 1
+	ld b, a
+
 
 ;Check the volume of the left speaker again
 CheckVolL2:
-    ldh a, [rNR50]
+	ldh a, [rNR50]
 	;If at full volume
-    and %01110000
-    srl a
-    srl a
-    srl a
-    srl a
-    cp %00000111
-    ret z
+	and %01110000
+	srl a
+	srl a
+	srl a
+	srl a
+	cp %00000111
+	ret z
 
 	;...Then increase volume by 1
-    add 1
-    sla a
-    sla a
-    sla a
-    sla a
+	add 1
+	sla a
+	sla a
+	sla a
+	sla a
 	
 	;Set all volume bits
-    or b
-    or %10001000
-    ldh [rNR50], a
-    ret
+	or b
+	or %10001000
+	ldh [rNR50], a
+	ret
 
 
 ;Get SFX from number
 LoadSFX:
-    add a
-    add a
-    ld hl, SFXTab
-    add l
-    ld l, a
-    jr nc, GetSFX
+	add a
+	add a
+	ld hl, SFXTab
+	add l
+	ld l, a
+	jr nc, GetSFX
 
-    inc h
+	inc h
+
 
 ;Get first channel macro value
 GetSFX:
-    ld a, [hl]
+	ld a, [hl]
 	;$FF = Skip
-    cp $FF
-    jr z, .GetSFXP2
+	cp $FF
+	jr z, .GetSFXP2
 
-    call PlaySFXFromMacro
+	call PlaySFXFromMacro
 
 
 ;Get second channel macro value
 .GetSFXP2
-    inc hl
-    ld a, [hl]
+	inc hl
+	ld a, [hl]
 	;$FF = Skip
-    cp $FF
-    jr z, .GetSFXP3
+	cp $FF
+	jr z, .GetSFXP3
 
-    call PlaySFXFromMacro
+	call PlaySFXFromMacro
 
 
 ;Get third channel macro value
 .GetSFXP3
-    inc hl
-    ld a, [hl]
+	inc hl
+	ld a, [hl]
 	;$FF = Skip
-    cp $FF
-    jr z, .GetSFXP4
+	cp $FF
+	jr z, .GetSFXP4
 
-    call PlaySFXFromMacro
+	call PlaySFXFromMacro
 
 
 ;Get fourth channel macro value
 .GetSFXP4
-    inc hl
-    ld a, [hl]
+	inc hl
+	ld a, [hl]
 	;$FF = Skip
-    cp $FF
-    jr z, .ExitSFX
+	cp $FF
+	jr z, .ExitSFX
 
-    call PlaySFXFromMacro
+	call PlaySFXFromMacro
 
 
 ;If no channels used, then return
 .ExitSFX
-    ret
+	ret
 
 
 PlaySFXFromMacro:
-    push hl
-    call GetSFXMacro
-    pop hl
-    ret
+	push hl
+	call GetSFXMacro
+	pop hl
+	ret
 
 
 ;Clear RAM and copy waveform
 Init:
 
 	;Disable audio
-    ld a, 0
-    ldh [rNR52], a
-    nop
-    ldh [rNR52], a
+	ld a, 0
+	ldh [rNR52], a
+	nop
+	ldh [rNR52], a
 	
 	;Clear RAM values
-    ld [C1SFXPos], a
-    ld [C1SFXPos+1], a
-    ld [C2SFXPos], a
-    ld [C2SFXPos+1], a
-    ld [C3SFXPos], a
-    ld [C3SFXPos+1], a
-    ld [C4SFXPos], a
-    ld [C4SFXPos+1], a
-    ld [C1PlayFlag], a
-    ld [C2PlayFlag], a
-    ld [C3PlayFlag], a
-    ld [C4PlayFlag], a
+	ld [C1SFXPos], a
+	ld [C1SFXPos+1], a
+	ld [C2SFXPos], a
+	ld [C2SFXPos+1], a
+	ld [C3SFXPos], a
+	ld [C3SFXPos+1], a
+	ld [C4SFXPos], a
+	ld [C4SFXPos+1], a
+	ld [C1PlayFlag], a
+	ld [C2PlayFlag], a
+	ld [C3PlayFlag], a
+	ld [C4PlayFlag], a
 	
 	;Set default tempo
-    ld a, 255
-    ld [Tempo], a
+	ld a, 255
+	ld [Tempo], a
 
 	;Set timer/beat counter
-    ld a, 1
-    ld [BeatCounter], a
+	ld a, 1
+	ld [BeatCounter], a
 	
 	;Copy the waveform into wave RAM
-    ld de, WaveRAM
-    ld hl, Waveform
-    ld b, $10
+	ld de, WaveRAM
+	ld hl, Waveform
+	ld b, $10
 
 .CopyWave
-    ld a, [hl]
-    ld [de], a
-    inc hl
-    inc de
-    dec b
-    jr nz, .CopyWave
+	ld a, [hl]
+	ld [de], a
+	inc hl
+	inc de
+	dec b
+	jr nz, .CopyWave
 
-    call ChannelInit
-    ret
+	call ChannelInit
+	ret
 
 
 ;Load song
 LoadSong:
 ;Get song number from A
-    ld l, a
-    ld h, $00
+	ld l, a
+	ld h, $00
 	
 	;Get song address
 	;x10 bytes = Song entry length
-    add hl, hl
-    ld d, h
-    ld e, l
-    add hl, hl
-    add hl, hl
-    add hl, de
+	add hl, hl
+	ld d, h
+	ld e, l
+	add hl, hl
+	add hl, hl
+	add hl, de
 	;Add to the song table
-    ld de, SongTab
-    add hl, de
+	ld de, SongTab
+	add hl, de
 	
 	;Load starting positions and note length pointers into RAM
-    ld a, [hl+]
-    ld [C1Pos], a
-    ld a, [hl+]
-    ld [C1Pos+1], a
-    ld a, [hl+]
-    ld [C2Pos], a
-    ld a, [hl+]
-    ld [C2Pos+1], a
-    ld a, [hl+]
-    ld [C3Pos], a
-    ld a, [hl+]
-    ld [C3Pos+1], a
-    ld a, [hl+]
-    ld [C4Pos], a
-    ld a, [hl+]
-    ld [C4Pos+1], a
-    ld a, [hl+]
-    ld [NoteLens], a
-    ld a, [hl+]
-    ld [NoteLens+1], a
+	ld a, [hl+]
+	ld [C1Pos], a
+	ld a, [hl+]
+	ld [C1Pos+1], a
+	ld a, [hl+]
+	ld [C2Pos], a
+	ld a, [hl+]
+	ld [C2Pos+1], a
+	ld a, [hl+]
+	ld [C3Pos], a
+	ld a, [hl+]
+	ld [C3Pos+1], a
+	ld a, [hl+]
+	ld [C4Pos], a
+	ld a, [hl+]
+	ld [C4Pos+1], a
+	ld a, [hl+]
+	ld [NoteLens], a
+	ld a, [hl+]
+	ld [NoteLens+1], a
 	;Set default note lengths
-    ld a, 1
-    ld [C1Len], a
-    ld [C2Len], a
-    ld a, 2
-    ld [C3Len], a
-    ld [C4Len], a
+	ld a, 1
+	ld [C1Len], a
+	ld [C2Len], a
+	ld a, 2
+	ld [C3Len], a
+	ld [C4Len], a
 	;Enable play flags
-    ld a, 3
-    ld [C1PlayFlag], a
-    ld [C2PlayFlag], a
-    ld [C3PlayFlag], a
-    ld [C4PlayFlag], a
-    ld [PlayFlag], a
-    ld a, 255
-    ld [Tempo], a
-    ld a, 1
-    ld [BeatCounter], a
+	ld a, 3
+	ld [C1PlayFlag], a
+	ld [C2PlayFlag], a
+	ld [C3PlayFlag], a
+	ld [C4PlayFlag], a
+	ld [PlayFlag], a
+	ld a, 255
+	ld [Tempo], a
+	ld a, 1
+	ld [BeatCounter], a
 
 ChannelInit:
 	;Turn on channels
-    ld a, %10001111
-    ldh [rNR52], a
-    nop
-    nop
-    ldh [rNR52], a
+	ld a, %10001111
+	ldh [rNR52], a
+	nop
+	nop
+	ldh [rNR52], a
 	;Initialize CH1 sweep
-    ld a, %00001000
-    ldh [rNR10], a
+	ld a, %00001000
+	ldh [rNR10], a
 	
 	;Set panning and master volume
-    ld a, %11111111
-    ldh [rNR51], a
-    ld [MasterPan], a
-    ld a, %01110111
-    ldh [rNR50], a
+	ld a, %11111111
+	ldh [rNR51], a
+	ld [MasterPan], a
+	ld a, %01110111
+	ldh [rNR50], a
 	
 	;Turn on CH3 DAC
-    ld a, %10000000
-    ldh [rNR30], a
+	ld a, %10000000
+	ldh [rNR30], a
 	
 	;Clear all channels' volume
-    xor a
-    ldh [rNR12], a
-    ldh [rNR22], a
-    ldh [rNR32], a
-    ldh [rNR42], a
+	xor a
+	ldh [rNR12], a
+	ldh [rNR22], a
+	ldh [rNR32], a
+	ldh [rNR42], a
 	
 	;Disable macro transpose
-    ld [C1MacroTrans], a
-    ld [C2MacroTrans], a
-    ld [C3MacroTrans], a
-    ld [C4MacroTrans], a
+	ld [C1MacroTrans], a
+	ld [C2MacroTrans], a
+	ld [C3MacroTrans], a
+	ld [C4MacroTrans], a
 	
 	;Disable macro times
-    ld [C1MacroTimes], a
-    ld [C2MacroTimes], a
-    ld [C3MacroTimes], a
-    ld [C4MacroTimes], a
+	ld [C1MacroTimes], a
+	ld [C2MacroTimes], a
+	ld [C3MacroTimes], a
+	ld [C4MacroTimes], a
 	
 	;Also disable Ch4 vibrato sequence
-    ld [C4VibSeqDelay], a
-    ret
+	ld [C4VibSeqDelay], a
+	ret
 
 
 PlaySong:
 	;Check to see if the song is currently playing
-    ld a, [PlayFlag]
-    and a
-    ret z
+	ld a, [PlayFlag]
+	and a
+	ret z
 
 	;Get the current song tempo and number of beats
-    ld a, [Tempo]
-    ld b, a
-    ld a, [BeatCounter]
-    add b
-    ld [BeatCounter], a
+	ld a, [Tempo]
+	ld b, a
+	ld a, [BeatCounter]
+	add b
+	ld [BeatCounter], a
 	;Don't update if no overflow
-    ret nc
+	ret nc
 
 StartC1:
 	;Set current channel number (0)
-    xor a
-    ld [CurChan], a
+	xor a
+	ld [CurChan], a
 	;Save current code position for restart
-    ld hl, CurRestartPos
-    ld de, StartC1
-    ld [hl], e
-    inc hl
-    ld [hl], d
+	ld hl, CurRestartPos
+	ld de, StartC1
+	ld [hl], e
+	inc hl
+	ld [hl], d
 	;Load current channel macro transpose
-    ld a, [C1MacroTrans]
-    ld [CurTrans], a
-    ld hl, C1PlayFlag
-    ld de, rNR11
-    call GetNextByte
+	ld a, [C1MacroTrans]
+	ld [CurTrans], a
+	ld hl, C1PlayFlag
+	ld de, rNR11
+	call GetNextByte
 	;Check if the current channel is active
-    ld a, [C1PlayFlag]
-    and %00000001
+	ld a, [C1PlayFlag]
+	and %00000001
 	;If not, then skip to channel 2
-    jp z, StartC2
+	jp z, StartC2
 
 	;Check if the current channel is active for SFX
-    ld a, [C1SFXPos+1]
-    and a
+	ld a, [C1SFXPos+1]
+	and a
 	;If so, then skip to channel 2
-    jp nz, StartC2
+	jp nz, StartC2
 
 	;Get instrument parameter bytes
 	;Process the channel envelope from sequence
-    ld hl, C1EnvSeqDelay
-    ld de, C1EnvSeq
-    ld a, [de]
-    ld c, a
-    inc de
-    ld a, [de]
-    ld b, a
-    ld de, rNR12
-    call CheckEnvSeqDelay
-    ld de, C1EnvSeq
-    ld a, c
-    ld [de], a
-    ld a, b
-    inc de
-    ld [de], a
-    ld hl, C1PlayFlag
-    ld de, rNR13
-    call SetPerLo
+	ld hl, C1EnvSeqDelay
+	ld de, C1EnvSeq
+	ld a, [de]
+	ld c, a
+	inc de
+	ld a, [de]
+	ld b, a
+	ld de, rNR12
+	call CheckEnvSeqDelay
+	ld de, C1EnvSeq
+	ld a, c
+	ld [de], a
+	ld a, b
+	inc de
+	ld [de], a
+	ld hl, C1PlayFlag
+	ld de, rNR13
+	call SetPerLo
 	;Process the channel vibrato from sequence
-    ld hl, C1VibSeqDelay
-    ld de, C1VibSeq
-    ld a, [de]
-    ld c, a
-    inc de
-    ld a, [de]
-    ld b, a
+	ld hl, C1VibSeqDelay
+	ld de, C1VibSeq
+	ld a, [de]
+	ld c, a
+	inc de
+	ld a, [de]
+	ld b, a
 	;Get the low of the frequency
-    ld de, C1Freq+1
-    call CheckVibSeqDelay
-    ld de, C1VibSeq
+	ld de, C1Freq+1
+	call CheckVibSeqDelay
+	ld de, C1VibSeq
 	;Store updated vibrato sequence pos. in RAM
-    ld a, c
-    ld [de], a
-    ld a, b
-    inc de
-    ld [de], a
+	ld a, c
+	ld [de], a
+	ld a, b
+	inc de
+	ld [de], a
 	;Check delay for pitch modulation sequence
-    ld a, [C1ModSeqDelay]
-    and a
+	ld a, [C1ModSeqDelay]
+	and a
 	;If value is 0, then skip
-    jr z, StartC2
+	jr z, StartC2
 
 .C1ProcessModSeq
 	;Otherwise, decrement
-    dec a
-    ld [C1ModSeqDelay], a
-    and a
+	dec a
+	ld [C1ModSeqDelay], a
+	and a
 	;If delay has not yet finished, then return
-    jr nz, StartC2
+	jr nz, StartC2
 
 	;Load sequence pointer from RAM
-    ld a, [C1ModSeq]
-    ld c, a
-    ld a, [C1ModSeq+1]
-    ld b, a
-    ld a, [bc]
+	ld a, [C1ModSeq]
+	ld c, a
+	ld a, [C1ModSeq+1]
+	ld b, a
+	ld a, [bc]
 	;If reached loop point (FF)...
-    cp $FF
-    jr z, .C1ProcessModLoop
+	cp $FF
+	jr z, .C1ProcessModLoop
 
 	;Otherwise, store the next value as new delay in RAM
-    ld [C1ModSeqDelay], a
-    inc bc
+	ld [C1ModSeqDelay], a
+	inc bc
 	;Next byte = note frequency change
-    ld a, [bc]
+	ld a, [bc]
 	;Add to current note
-    ld e, a
-    ld a, [CurNoteC1]
-    add e
-    push af
+	ld e, a
+	ld a, [CurNoteC1]
+	add e
+	push af
 	;Get the high frequency byte and add it
-    ld de, FreqsHi
-    add e
-    ld e, a
-    jr nc, .C1ProcessModSeq2
+	ld de, FreqsHi
+	add e
+	ld e, a
+	jr nc, .C1ProcessModSeq2
 
-    inc d
+	inc d
 
 .C1ProcessModSeq2
-    ld a, [de]
-    ld [C1Freq], a
-    pop af
+	ld a, [de]
+	ld [C1Freq], a
+	pop af
 	;Now get the low frequency byte and add it
-    ld de, FreqsLo
-    add e
-    ld e, a
-    jr nc, .C1ProcessModSeq3
+	ld de, FreqsLo
+	add e
+	ld e, a
+	jr nc, .C1ProcessModSeq3
 
-    inc d
+	inc d
 
 .C1ProcessModSeq3
-    ld a, [de]
-    ld [C1Freq+1], a
+	ld a, [de]
+	ld [C1Freq+1], a
 	;Advance to the next part of the sequence
-    inc bc
+	inc bc
 	;Store the updated pointer in RAM
-    ld a, c
-    ld [C1ModSeq], a
-    ld a, b
-    ld [C1ModSeq+1], a
-    jp StartC2
+	ld a, c
+	ld [C1ModSeq], a
+	ld a, b
+	ld [C1ModSeq+1], a
+	jp StartC2
 
 
 ;Go to pitch modulation sequence loop
 .C1ProcessModLoop
 	;Reset the delay to 1
-    ld a, 1
-    ld [C1ModSeqDelay], a
+	ld a, 1
+	ld [C1ModSeqDelay], a
 	;Go to the position in the following pointer (2 bytes)
-    inc bc
-    ld a, [bc]
-    ld [C1ModSeq], a
-    inc bc
-    ld a, [bc]
-    ld [C1ModSeq+1], a
+	inc bc
+	ld a, [bc]
+	ld [C1ModSeq], a
+	inc bc
+	ld a, [bc]
+	ld [C1ModSeq+1], a
 
 StartC2:
 	;Set current channel number (1)
-    ld a, 1
-    ld [CurChan], a
+	ld a, 1
+	ld [CurChan], a
 	;Save current code position for restart	
-    ld hl, CurRestartPos
-    ld de, StartC2
-    ld [hl], e
-    inc hl
-    ld [hl], d
+	ld hl, CurRestartPos
+	ld de, StartC2
+	ld [hl], e
+	inc hl
+	ld [hl], d
 	;Load current channel macro transpose
-    ld a, [C2MacroTrans]
-    ld [CurTrans], a
-    ld hl, C2PlayFlag
-    ld de, rNR21
-    call GetNextByte
+	ld a, [C2MacroTrans]
+	ld [CurTrans], a
+	ld hl, C2PlayFlag
+	ld de, rNR21
+	call GetNextByte
 	;Check if the current channel is active
-    ld a, [C2PlayFlag]
-    and %00000001
+	ld a, [C2PlayFlag]
+	and %00000001
 	;If not, then skip to channel 3
-    jp z, StartC3
+	jp z, StartC3
 
 	;Check if the current channel is active for SFX
-    ld a, [C2SFXPos+1]
-    and a
+	ld a, [C2SFXPos+1]
+	and a
 	;If so, then skip to channel 3
-    jp nz, StartC3
+	jp nz, StartC3
 
 	;Get instrument parameter bytes
 	;Process the channel envelope from sequence
-    ld hl, C2EnvSeqDelay
-    ld de, C2EnvSeq
-    ld a, [de]
-    ld c, a
-    inc de
-    ld a, [de]
-    ld b, a
-    ld de, rNR22
-    call CheckEnvSeqDelay
-    ld de, C2EnvSeq
-    ld a, c
-    ld [de], a
-    ld a, b
-    inc de
-    ld [de], a
-    ld hl, C2PlayFlag
-    ld de, rNR23
-    call SetPerLo
+	ld hl, C2EnvSeqDelay
+	ld de, C2EnvSeq
+	ld a, [de]
+	ld c, a
+	inc de
+	ld a, [de]
+	ld b, a
+	ld de, rNR22
+	call CheckEnvSeqDelay
+	ld de, C2EnvSeq
+	ld a, c
+	ld [de], a
+	ld a, b
+	inc de
+	ld [de], a
+	ld hl, C2PlayFlag
+	ld de, rNR23
+	call SetPerLo
 	;Process the channel vibrato from sequence
-    ld hl, C2VibSeqDelay
-    ld de, C2VibSeq
-    ld a, [de]
-    ld c, a
-    inc de
-    ld a, [de]
-    ld b, a
+	ld hl, C2VibSeqDelay
+	ld de, C2VibSeq
+	ld a, [de]
+	ld c, a
+	inc de
+	ld a, [de]
+	ld b, a
 	;Get the low of the frequency
-    ld de, C2Freq+1
-    call CheckVibSeqDelay
-    ld de, C2VibSeq
+	ld de, C2Freq+1
+	call CheckVibSeqDelay
+	ld de, C2VibSeq
 	;Store updated vibrato sequence pos. in RAM
-    ld a, c
-    ld [de], a
-    ld a, b
-    inc de
-    ld [de], a
+	ld a, c
+	ld [de], a
+	ld a, b
+	inc de
+	ld [de], a
 	;Check delay for pitch modulation sequence
-    ld a, [C2ModSeqDelay]
-    and a
+	ld a, [C2ModSeqDelay]
+	and a
 	;If value is 0, then skip
-    jr z, StartC3
+	jr z, StartC3
 
 .C2ProcessModSeq
 	;Otherwise, decrement
-    dec a
-    ld [C2ModSeqDelay], a
-    and a
+	dec a
+	ld [C2ModSeqDelay], a
+	and a
 	;If delay has not yet finished, then return
-    jr nz, StartC3
+	jr nz, StartC3
 
 	;Load sequence pointer from RAM
-    ld a, [C2ModSeq]
-    ld c, a
-    ld a, [C2ModSeq+1]
-    ld b, a
-    ld a, [bc]
-    cp $FF
-    jr z, .C2ProcessModLoop
+	ld a, [C2ModSeq]
+	ld c, a
+	ld a, [C2ModSeq+1]
+	ld b, a
+	ld a, [bc]
+	cp $FF
+	jr z, .C2ProcessModLoop
 
 	;Otherwise, store the next value as new delay in RAM
-    ld [C2ModSeqDelay], a
-    inc bc
+	ld [C2ModSeqDelay], a
+	inc bc
 	;Next byte = note frequency change
-    ld a, [bc]
+	ld a, [bc]
 	;Add to current note
-    ld e, a
-    ld a, [CurNoteC2]
-    add e
-    push af
+	ld e, a
+	ld a, [CurNoteC2]
+	add e
+	push af
 	;Get the high frequency byte and add it
-    ld de, FreqsHi
-    add e
-    ld e, a
-    jr nc, .C2ProcessModSeq2
+	ld de, FreqsHi
+	add e
+	ld e, a
+	jr nc, .C2ProcessModSeq2
 
-    inc d
+	inc d
 
 .C2ProcessModSeq2
-    ld a, [de]
-    ld [C2Freq], a
-    pop af
+	ld a, [de]
+	ld [C2Freq], a
+	pop af
 	;Now get the low frequency byte and add it
-    ld de, FreqsLo
-    add e
-    ld e, a
-    jr nc, .C2ProcessModSeq3
+	ld de, FreqsLo
+	add e
+	ld e, a
+	jr nc, .C2ProcessModSeq3
 
-    inc d
+	inc d
 
 .C2ProcessModSeq3
-    ld a, [de]
-    ld [C2Freq+1], a
+	ld a, [de]
+	ld [C2Freq+1], a
 	;Advance to the next part of the sequence
-    inc bc
+	inc bc
 	;Store the updated pointer in RAM
-    ld a, c
-    ld [C2ModSeq], a
-    ld a, b
-    ld [C2ModSeq+1], a
-    jp StartC3
+	ld a, c
+	ld [C2ModSeq], a
+	ld a, b
+	ld [C2ModSeq+1], a
+	jp StartC3
 
 
 ;Go to pitch modulation sequence loop
 .C2ProcessModLoop
 	;Reset the delay to 1
-    ld a, 1
-    ld [C2ModSeqDelay], a
+	ld a, 1
+	ld [C2ModSeqDelay], a
 	;Go to the position in the following pointer (2 bytes)
-    inc bc
-    ld a, [bc]
-    ld [C2ModSeq], a
-    inc bc
-    ld a, [bc]
-    ld [C2ModSeq+1], a
+	inc bc
+	ld a, [bc]
+	ld [C2ModSeq], a
+	inc bc
+	ld a, [bc]
+	ld [C2ModSeq+1], a
 
 StartC3:
 	;Set current channel number (2)
-    ld a, 2
-    ld [CurChan], a
+	ld a, 2
+	ld [CurChan], a
 	;Save current code position for restart
-    ld hl, CurRestartPos
-    ld de, StartC3
-    ld [hl], e
-    inc hl
-    ld [hl], d
+	ld hl, CurRestartPos
+	ld de, StartC3
+	ld [hl], e
+	inc hl
+	ld [hl], d
 	;Load current channel macro transpose
-    ld a, [C3MacroTrans]
-    ld [CurTrans], a
-    ld hl, C3PlayFlag
-    ld de, rNR31
-    call GetNextByte
+	ld a, [C3MacroTrans]
+	ld [CurTrans], a
+	ld hl, C3PlayFlag
+	ld de, rNR31
+	call GetNextByte
 	;Check if the current channel is active
-    ld a, [C3PlayFlag]
-    and %00000001
+	ld a, [C3PlayFlag]
+	and %00000001
 	;If not, then skip to channel 4
-    jp z, StartC4
+	jp z, StartC4
 
 	;Check if the current channel is active for SFX
-    ld a, [C3SFXPos+1]
-    and a
+	ld a, [C3SFXPos+1]
+	and a
 	;If so, then skip to channel 3
-    jp nz, StartC4
+	jp nz, StartC4
 
 	;Get instrument parameter bytes
 	;Set period
-    ld hl, C3PlayFlag
-    ld de, rNR33
-    call SetPerLo
+	ld hl, C3PlayFlag
+	ld de, rNR33
+	call SetPerLo
 	;Process the channel envelope from sequence
-    ld hl, C3EnvSeqDelay
-    ld de, C3EnvSeq
-    ld a, [de]
-    ld c, a
-    inc de
-    ld a, [de]
-    ld b, a
-    ld de, rNR32
-    call CheckEnvSeqDelay
-    ld de, C3EnvSeq
-    ld a, c
-    ld [de], a
-    ld a, b
-    inc de
-    ld [de], a
+	ld hl, C3EnvSeqDelay
+	ld de, C3EnvSeq
+	ld a, [de]
+	ld c, a
+	inc de
+	ld a, [de]
+	ld b, a
+	ld de, rNR32
+	call CheckEnvSeqDelay
+	ld de, C3EnvSeq
+	ld a, c
+	ld [de], a
+	ld a, b
+	inc de
+	ld [de], a
 	;Process the channel vibrato from sequence
-    ld hl, C3VibSeqDelay
-    ld de, C3VibSeq
-    ld a, [de]
-    ld c, a
-    inc de
-    ld a, [de]
-    ld b, a
+	ld hl, C3VibSeqDelay
+	ld de, C3VibSeq
+	ld a, [de]
+	ld c, a
+	inc de
+	ld a, [de]
+	ld b, a
 	;Get the low of the frequency
-    ld de, C3Freq+1
-    call CheckVibSeqDelay
-    ld de, C3VibSeq
+	ld de, C3Freq+1
+	call CheckVibSeqDelay
+	ld de, C3VibSeq
 	;Store updated vibrato sequence pos. in RAM
-    ld a, c
-    ld [de], a
-    ld a, b
-    inc de
-    ld [de], a
+	ld a, c
+	ld [de], a
+	ld a, b
+	inc de
+	ld [de], a
 	;Check delay for pitch modulation sequence
-    ld a, [C3ModSeqDelay]
-    and a
+	ld a, [C3ModSeqDelay]
+	and a
 	;If value is 0, then skip
-    jr z, StartC4
+	jr z, StartC4
 
 .C3ProcessModSeq
 	;Otherwise, decrement
-    dec a
-    ld [C3ModSeqDelay], a
-    and a
+	dec a
+	ld [C3ModSeqDelay], a
+	and a
 	;If delay has not yet finished, then return
-    jr nz, StartC4
+	jr nz, StartC4
 
 	;Load sequence pointer from RAM
-    ld a, [C3ModSeq]
-    ld c, a
-    ld a, [C3ModSeq+1]
-    ld b, a
-    ld a, [bc]
+	ld a, [C3ModSeq]
+	ld c, a
+	ld a, [C3ModSeq+1]
+	ld b, a
+	ld a, [bc]
 	;If reached loop point (FF)...
-    cp $FF
-    jr z, .C3ProcessModLoop
+	cp $FF
+	jr z, .C3ProcessModLoop
 
 	;Otherwise, store the next value as new delay in RAM
-    ld [C3ModSeqDelay], a
-    inc bc
+	ld [C3ModSeqDelay], a
+	inc bc
 	;Next byte = note frequency change
-    ld a, [bc]
+	ld a, [bc]
 	;Add to current note
-    ld e, a
-    ld a, [CurNoteC3]
-    add e
-    push af
+	ld e, a
+	ld a, [CurNoteC3]
+	add e
+	push af
 	;Get the high frequency byte and add it
-    ld de, FreqsHi
-    add e
-    ld e, a
-    jr nc, .C3ProcessModSeq2
+	ld de, FreqsHi
+	add e
+	ld e, a
+	jr nc, .C3ProcessModSeq2
 
-    inc d
+	inc d
 
 .C3ProcessModSeq2
-    ld a, [de]
-    ld [C3Freq], a
-    pop af
+	ld a, [de]
+	ld [C3Freq], a
+	pop af
 	;Now get the low frequency byte and add it
-    ld de, FreqsLo
-    add e
-    ld e, a
-    jr nc, .C2ProcessModSeq3
+	ld de, FreqsLo
+	add e
+	ld e, a
+	jr nc, .C2ProcessModSeq3
 
-    inc d
+	inc d
 
 .C2ProcessModSeq3
-    ld a, [de]
-    ld [C3Freq+1], a
+	ld a, [de]
+	ld [C3Freq+1], a
 	;Advance to the next part of the sequence
-    inc bc
+	inc bc
 	;Store the updated pointer in RAM
-    ld a, c
-    ld [C3ModSeq], a
-    ld a, b
-    ld [C3ModSeq+1], a
-    jp StartC4
+	ld a, c
+	ld [C3ModSeq], a
+	ld a, b
+	ld [C3ModSeq+1], a
+	jp StartC4
 
 
 ;Go to pitch modulation sequence loop
 .C3ProcessModLoop
 	;Reset the delay to 1
-    ld a, 1
-    ld [C3ModSeqDelay], a
+	ld a, 1
+	ld [C3ModSeqDelay], a
 	;Go to the position in the following pointer (2 bytes)
-    inc bc
-    ld a, [bc]
-    ld [C3ModSeq], a
-    inc bc
-    ld a, [bc]
-    ld [C3ModSeq+1], a
+	inc bc
+	ld a, [bc]
+	ld [C3ModSeq], a
+	inc bc
+	ld a, [bc]
+	ld [C3ModSeq+1], a
 
 StartC4:
 	;Set current channel number (3)
-    ld a, 3
-    ld [CurChan], a
+	ld a, 3
+	ld [CurChan], a
 	;Save current code position for restart
-    ld hl, CurRestartPos
-    ld de, StartC4
-    ld [hl], e
-    inc hl
-    ld [hl], d
+	ld hl, CurRestartPos
+	ld de, StartC4
+	ld [hl], e
+	inc hl
+	ld [hl], d
 	;Load current channel macro transpose
-    ld a, [C4MacroTrans]
-    ld [CurTrans], a
-    ld hl, C4PlayFlag
-    ld de, rNR41
-    call GetNextByte
+	ld a, [C4MacroTrans]
+	ld [CurTrans], a
+	ld hl, C4PlayFlag
+	ld de, rNR41
+	call GetNextByte
 	;Check if the current channel is active
-    ld a, [C4PlayFlag]
-    and %00000001
+	ld a, [C4PlayFlag]
+	and %00000001
 	;If not, then set period and return
-    jr z, .C4SetPeriod
+	jr z, .C4SetPeriod
 
 	;Check if the current channel is active for SFX
-    ld a, [C4SFXPos+1]
-    and a
+	ld a, [C4SFXPos+1]
+	and a
 	;If value is 0, then skip
-    jp nz, .C4SetPeriod
+	jp nz, .C4SetPeriod
 
 	;Get instrument parameter bytes
 	;Process the channel envelope from sequence
-    ld hl, C4EnvSeqDelay
-    ld de, C4EnvSeq
-    ld a, [de]
-    ld c, a
-    inc de
-    ld a, [de]
-    ld b, a
-    ld de, rNR42
-    call CheckEnvSeqDelay
-    ld de, C4EnvSeq
-    ld a, c
-    ld [de], a
-    ld a, b
-    inc de
-    ld [de], a
+	ld hl, C4EnvSeqDelay
+	ld de, C4EnvSeq
+	ld a, [de]
+	ld c, a
+	inc de
+	ld a, [de]
+	ld b, a
+	ld de, rNR42
+	call CheckEnvSeqDelay
+	ld de, C4EnvSeq
+	ld a, c
+	ld [de], a
+	ld a, b
+	inc de
+	ld [de], a
 	;Now process the vibrato envelope
-    call C4CheckVibSeqDelay
+	call C4CheckVibSeqDelay
 
 .C4SetPeriod
-    ld hl, C4PlayFlag
-    ld de, rNR43
-    call SetPerLo
-    ret
+	ld hl, C4PlayFlag
+	ld de, rNR43
+	call SetPerLo
+	ret
 
 
 CheckEnvSeqDelay:
 ;Check if envelope sequence is enabled
-    ld a, [hl]
-    and a
-    ret z
+	ld a, [hl]
+	and a
+	ret z
 
 	;Otherwise, decrement
-    dec [hl]
+	dec [hl]
 	;If delay has not yet finished, then return
-    ret nz
+	ret nz
 
 	;Otherwise, check if reached end of pattern (value FF)
-    ld a, [bc]
-    cp $FF
+	ld a, [bc]
+	cp $FF
 	;If not, then keep going
-    jr nz, ProcessEnvSeq
+	jr nz, ProcessEnvSeq
 
 	;Otherwise, then disable envelope sequence
-    ld a, 0
-    ld [hl], a
-    ret
+	ld a, 0
+	ld [hl], a
+	ret
 
 
 ProcessEnvSeq:
 	;Write the volume to the register
-    ld [de], a
+	ld [de], a
 	;Get next byte
-    inc bc
-    ld a, [bc]
+	inc bc
+	ld a, [bc]
 	;Set delay for next envelope value
-    ld [hl], a
+	ld [hl], a
 	;Now go to frequency...
-    ld a, l
-    sub 6
-    ld l, a
-    jr nc, .ProcessEnvSeq2
+	ld a, l
+	sub 6
+	ld l, a
+	jr nc, .ProcessEnvSeq2
 
-    dec h
+	dec h
 
 .ProcessEnvSeq2
 	;and reset the trigger
-    ld a, [hl]
-    or $80
-    ld [hl], a
+	ld a, [hl]
+	or $80
+	ld [hl], a
 	;Then store the current duty into RAM
-    ld a, l
-    add 4
-    ld l, a
-    jr nc, .ProcessEnvSeq3
+	ld a, l
+	add 4
+	ld l, a
+	jr nc, .ProcessEnvSeq3
 
-    inc h
+	inc h
 
 .ProcessEnvSeq3
-    ld a, [de]
-    ld [hl], a
+	ld a, [de]
+	ld [hl], a
 	;Go to next byte in sequence
-    inc bc
-    ret
+	inc bc
+	ret
 
 
 CheckVibSeqDelay:
 	;If value is 0, then return
-    ld a, [hl]
-    and a
-    ret z
+	ld a, [hl]
+	and a
+	ret z
 
 	;If delay is more than 1, then return (wait)
-    dec [hl]
-    ret nz
+	dec [hl]
+	ret nz
 
 	;Load delay into RAM
-    inc bc
-    ld a, [bc]
-    push hl
-    ld [hl], a
-    dec bc
+	inc bc
+	ld a, [bc]
+	push hl
+	ld [hl], a
+	dec bc
 	;Load current frequency from RAM
-    ld a, [de]
-    ld l, a
-    dec de
-    ld a, [de]
-    ld h, a
+	ld a, [de]
+	ld l, a
+	dec de
+	ld a, [de]
+	ld h, a
 	;Now get vibrato value
-    ld a, [bc]
+	ld a, [bc]
 	;Is it a stop command?
-    cp $7E
-    jr nz, ProcessVibSeq
+	cp $7E
+	jr nz, ProcessVibSeq
 
-    pop hl
-    ret
+	pop hl
+	ret
 
 
 ProcessVibSeq:
 	;Is it a loop command?
-    cp $7D
+	cp $7D
 	;If so, then keep checking
-    jr z, ProcessVibLoop
+	jr z, ProcessVibLoop
 
 	;Is it negative?
-    cp $7F
+	cp $7F
 	;If so, then subtract from frequency
-    jr nc, .SubVibFreq
+	jr nc, .SubVibFreq
 
 ;Otherwise, add to frequency
 .AddVibFreq
-    add l
-    ld l, a
-    jr nc, .ProcessVibSeq2
+	add l
+	ld l, a
+	jr nc, .ProcessVibSeq2
 
-    inc h
+	inc h
 
 .ProcessVibSeq2
-    jr .ProcessVibSeq3
+	jr .ProcessVibSeq3
 
 .SubVibFreq
-    add l
-    ld l, a
-    jr c, .ProcessVibSeq3
+	add l
+	ld l, a
+	jr c, .ProcessVibSeq3
 
-    dec h
+	dec h
 
 .ProcessVibSeq3
 	;Load the new frequency into RAM
-    ld a, h
-    ld [de], a
-    inc de
-    ld a, l
-    ld [de], a
+	ld a, h
+	ld [de], a
+	inc de
+	ld a, l
+	ld [de], a
 	
 	;Go to the next entry and return
-    inc bc
-    inc bc
-    pop hl
-    ret
+	inc bc
+	inc bc
+	pop hl
+	ret
 
 
 ProcessVibLoop:
 	;Get the next 2 bytes (pointer) and jump to position
-    inc bc
-    ld a, [bc]
-    push af
-    inc bc
-    ld a, [bc]
-    ld b, a
-    pop af
-    ld c, a
-    pop hl
+	inc bc
+	ld a, [bc]
+	push af
+	inc bc
+	ld a, [bc]
+	ld b, a
+	pop af
+	ld c, a
+	pop hl
 	;Reset the delay to 1
-    ld a, 1
-    ld [hl], a
-    ret
+	ld a, 1
+	ld [hl], a
+	ret
 
 
 GetNextByte:
 	;Check to see if the current channel is 1-3
-    ld a, [hl]
-    and %00000010
+	ld a, [hl]
+	and %00000010
 	;Return if it is 4
-    ret z
+	ret z
 
 	;Otherwise, then go to channel note length
-    inc hl
-    dec [hl]
+	inc hl
+	dec [hl]
 	;Return if still playing note
-    ret nz
+	ret nz
 
 	;Otherwise, then get next command
-    inc hl
-    ld c, [hl]
-    inc hl
-    ld b, [hl]
-    ld a, [bc]
+	inc hl
+	ld c, [hl]
+	inc hl
+	ld b, [hl]
+	ld a, [bc]
 	
 	;Load the current command value into RAM
-    ld [CurCmd], a
+	ld [CurCmd], a
 	;Mask out the highest bit
-    and %01111111
+	and %01111111
 	
 	;Is it a note?
-    cp $5F
+	cp $5F
 	;If not, then it must be a command
-    jp nc, GetVCMD
+	jp nc, GetVCMD
 
 	;Save current audio register value
-    push de
+	push de
 	
 	;Get the current transpose
-    ld de, CurTrans
-    ld a, [de]
-    ld d, a
+	ld de, CurTrans
+	ld a, [de]
+	ld d, a
 	;And get the current byte
-    ld a, [bc]
+	ld a, [bc]
 	;Mask out the highest bit
-    and %01111111
+	and %01111111
 	;Add the transpose
-    add d
-    ld d, a
+	add d
+	ld d, a
 	
 	;Save the current note value
-    push af
-    ld a, [CurChan]
+	push af
+	ld a, [CurChan]
 CheckC1:
 	;Is the channel 1?
-    cp 0
+	cp 0
 	;If not, then skip to channel 2
-    jr nz, CheckC2
+	jr nz, CheckC2
 
 	;Otherwise, then save current Ch1 note
-    ld a, d
-    ld [CurNoteC1], a
+	ld a, d
+	ld [CurNoteC1], a
 
 CheckC2:
 	;Is the channel 2?
-    cp 1
+	cp 1
 	;If not, then skip to channel 3
-    jr nz, CheckC3
+	jr nz, CheckC3
 
-    ld a, d
-    ld [CurNoteC2], a
+	ld a, d
+	ld [CurNoteC2], a
 
 CheckC3:
 	;Is the channel 3?
-    cp 2
+	cp 2
 	;If not, then skip to the next part
-    jr nz, GetFreq
+	jr nz, GetFreq
 
-    ld a, d
-    ld [CurNoteC3], a
+	ld a, d
+	ld [CurNoteC3], a
 
 ;Get the current frequency
 GetFreq:
-    pop af
-    ld de, FreqsHi
-    add e
-    ld e, a
-    jp nc, .GetFreq2
+	pop af
+	ld de, FreqsHi
+	add e
+	ld e, a
+	jp nc, .GetFreq2
 
-    inc d
+	inc d
 
 .GetFreq2
-    ld a, [de]
+	ld a, [de]
 	;Load that value into RAM
-    inc hl
-    ld [hl], a
+	inc hl
+	ld [hl], a
 	;Get current transpose value
-    ld de, CurTrans
-    ld a, [de]
-    ld d, a
+	ld de, CurTrans
+	ld a, [de]
+	ld d, a
 	;And get current note again
-    ld a, [bc]
+	ld a, [bc]
 	;Mask off the highest bit
-    and %01111111
+	and %01111111
 	;Add the transpose
-    add d
+	add d
 	;Now get the low byte from table
-    ld de, FreqsLo
-    add e
-    ld e, a
-    jr nc, .GetFreq3
+	ld de, FreqsLo
+	add e
+	ld e, a
+	jr nc, .GetFreq3
 
-    inc d
+	inc d
 
 .GetFreq3
-    ld a, [de]
-    inc hl
-    ld [hl], a
+	ld a, [de]
+	inc hl
+	ld [hl], a
 	
 ;Now get the note length from the next byte
 GetLen:	
-    inc bc
-    ld a, [bc]
+	inc bc
+	ld a, [bc]
 	;Mask off the upper 4 bits to get the note length index
-    and %00001111
-    push hl
+	and %00001111
+	push hl
 	;Get the address of the current note length
-    ld hl, NoteLens+1
-    ld d, [hl]
-    dec hl
-    ld e, [hl]
-    pop hl
-    add e
-    ld e, a
-    jr nc, .GetLen2
+	ld hl, NoteLens+1
+	ld d, [hl]
+	dec hl
+	ld e, [hl]
+	pop hl
+	add e
+	ld e, a
+	jr nc, .GetLen2
 
-    inc d
+	inc d
 
 .GetLen2
-    ld a, [de]
+	ld a, [de]
 	;Store the current note length value in RAM
-    ld de, -4
-    add hl, de
-    ld [hl], a
+	ld de, -4
+	add hl, de
+	ld [hl], a
 	
 ;Now get the instrument from the first bit of byte 1 and lower 4 bits of byte 2
 GetInst:
 	;Get the first note byte again
-    ld a, [CurCmd]
+	ld a, [CurCmd]
 	;If bit is set, then add 32 to total (instrument is +16)
-    and %10000000
-    srl a
-    srl a
-    ld d, a
+	and %10000000
+	srl a
+	srl a
+	ld d, a
 	;Now get the second byte again
-    ld a, [bc]
+	ld a, [bc]
 	;Mask out the lower 4 bits to get the instrument number
-    and %11110000
+	and %11110000
 	;Shift right to calculate the instrument offset (2 x instrument number)
-    srl a
-    srl a
-    srl a
+	srl a
+	srl a
+	srl a
 	;Add the extra 32 bytes if present
-    add d
+	add d
 	
 	;Get the current instrument offset in table
-    push hl
-    ld hl, InsTab
-    add l
-    ld l, a
-    jr nc, .GetInst2
+	push hl
+	ld hl, InsTab
+	add l
+	ld l, a
+	jr nc, .GetInst2
 
-    inc h
+	inc h
 
 .GetInst2
 	;Load the current instrument address into RAM
-    ld e, [hl]
-    inc hl
-    ld d, [hl]
-    pop hl
+	ld e, [hl]
+	inc hl
+	ld d, [hl]
+	pop hl
 	
 	;Update the position and load it into RAM
-    inc bc
-    inc hl
-    ld [hl], c
-    inc hl
-    ld [hl], b
-    ld b, d
-    ld c, e
-    pop de
-    inc hl
+	inc bc
+	inc hl
+	ld [hl], c
+	inc hl
+	ld [hl], b
+	ld b, d
+	ld c, e
+	pop de
+	inc hl
 	;Instrument byte 1 - Period control
-    ld a, [bc]
-    or [hl]
-    ld [hl], a
-    inc hl
-    inc hl
-    inc hl
+	ld a, [bc]
+	or [hl]
+	ld [hl], a
+	inc hl
+	inc hl
+	inc hl
 	;Instrument byte 2 - Duty
-    inc bc
-    ld a, [bc]
-    ld [hl], a
+	inc bc
+	ld a, [bc]
+	ld [hl], a
 	;Instrument byte 3 - Initial volume/envelope
-    inc bc
-    inc de
-    inc hl
-    ld a, [bc]
-    ld [hl], a
-    inc hl
-    inc hl
-    inc bc
+	inc bc
+	inc de
+	inc hl
+	ld a, [bc]
+	ld [hl], a
+	inc hl
+	inc hl
+	inc bc
 	;Instrument byte 4 - Volume/envelope sequence delay
-    ld a, [bc]
-    ld [hl], a
-    inc hl
-    inc bc
+	ld a, [bc]
+	ld [hl], a
+	inc hl
+	inc bc
 	;Instrument byte 5-6 = Volume/envelope sequence pointer
-    ld a, [bc]
-    ld [hl], a
-    inc hl
-    inc bc
-    ld a, [bc]
-    ld [hl], a
-    inc hl
-    inc bc
+	ld a, [bc]
+	ld [hl], a
+	inc hl
+	inc bc
+	ld a, [bc]
+	ld [hl], a
+	inc hl
+	inc bc
 	;Instrument byte 7 = Vibrato sequence delay
-    ld a, [bc]
-    ld [hl], a
-    inc hl
-    inc bc
+	ld a, [bc]
+	ld [hl], a
+	inc hl
+	inc bc
 	;Instrument byte 8-9 = Vibrato sequence pointer
-    ld a, [bc]
-    ld [hl], a
-    inc hl
-    inc bc
-    ld a, [bc]
-    ld [hl], a
-    inc bc
-    inc hl
+	ld a, [bc]
+	ld [hl], a
+	inc hl
+	inc bc
+	ld a, [bc]
+	ld [hl], a
+	inc bc
+	inc hl
 	;Instrument byte 10 = Pitch modulation sequence delay
-    ld a, [bc]
-    ld [hl], a
-    inc bc
-    inc hl
+	ld a, [bc]
+	ld [hl], a
+	inc bc
+	inc hl
 	;Instrument byte 11-12 = Pitch modulation sequence pointer
-    ld a, [bc]
-    ld [hl], a
-    inc bc
-    inc hl
-    ld a, [bc]
-    ld [hl], a
-    ret
+	ld a, [bc]
+	ld [hl], a
+	inc bc
+	inc hl
+	ld a, [bc]
+	ld [hl], a
+	ret
 
 
 ;Set frequency/period (low)
 SetPerLo:
 ;Check if channel is active
-    ld a, [hl]
-    and %00000001
+	ld a, [hl]
+	and %00000001
 	;Return if not active
-    ret z
+	ret z
 
 	;Get second byte of frequency (period low)
-    ld bc, 5
-    add hl, bc
-    ld a, e
+	ld bc, 5
+	add hl, bc
+	ld a, e
 	;Go to another method if channel 4
-    cp LOW(rNR43)
-    jp z, SetC4Freq
+	cp LOW(rNR43)
+	jp z, SetC4Freq
 
 	;Otherwise, load the period low into register NRx3
-    ld a, [hl]
-    ld [de], a
+	ld a, [hl]
+	ld [de], a
 
 CheckPerTrigger:
 	;Now check the period high
-    dec hl
-    inc de
+	dec hl
+	inc de
 	;Save the period address and RAM location
-    push de
-    push hl
+	push de
+	push hl
 	;If trigger is set, then don't set the duty and envelope
-    ld a, [hl]
-    and %10000000
-    jr z, SetPerHi
+	ld a, [hl]
+	and %10000000
+	jr z, SetPerHi
 
 	;Set duty from RAM value
-    ld bc, 3
-    add hl, bc
-    dec de
-    dec de
-    dec de
-    ld a, [hl]
-    ld [de], a
+	ld bc, 3
+	add hl, bc
+	dec de
+	dec de
+	dec de
+	ld a, [hl]
+	ld [de], a
 	;Set envelope from RAM value
-    inc hl
-    inc de
-    ld a, [hl]
-    ld [de], a
+	inc hl
+	inc de
+	ld a, [hl]
+	ld [de], a
 
 SetPerHi:
 ;Set period (high)
 	;Load the period low (with trigger) value from RAM
-    pop hl
-    pop de
-    ld a, [hl]
-    ld [de], a
+	pop hl
+	pop de
+	ld a, [hl]
+	ld [de], a
 	
 	;Clear the trigger in RAM
-    and %01111111
-    ld [hl], a
-    ret
+	and %01111111
+	ld [hl], a
+	ret
 
 
 SetC4Freq:
 	;Load the current noise frequency from RAM variable into Ch4 RAM and NR43
-    ld a, [CurNoise]
-    ld [C4Freq+1], a
-    ld [de], a
+	ld a, [CurNoise]
+	ld [C4Freq+1], a
+	ld [de], a
 	;Then do the rest
-    jr CheckPerTrigger
+	jr CheckPerTrigger
 
 C4CheckVibSeqDelay:
 	;If value is 0, then return
-    ld a, [C4VibSeqDelay]
-    and a
-    ret z
+	ld a, [C4VibSeqDelay]
+	and a
+	ret z
 
 	;Otherwise, decrement
-    dec a
-    ld [C4VibSeqDelay], a
-    and a
-    ret nz
+	dec a
+	ld [C4VibSeqDelay], a
+	and a
+	ret nz
 
 	;Load noise vibrato pointer from RAM
-    ld a, [C4VibSeq]
-    ld l, a
-    ld a, [C4VibSeq+1]
-    ld h, a
-    ld a, [hl]
+	ld a, [C4VibSeq]
+	ld l, a
+	ld a, [C4VibSeq+1]
+	ld h, a
+	ld a, [hl]
 	;Is it a stop command?
-    cp $7E
+	cp $7E
 	;Then return
-    ret z
+	ret z
 
 	;Is it a loop command?
-    cp $7D
+	cp $7D
 	;If so, then keep checking
-    jr z, C4ProcessVibLoop
+	jr z, C4ProcessVibLoop
 
 	;Otherwise, set the current noise frequency from sequence
-    ld [CurNoise], a
-    inc hl
-    ld a, [hl]
-    ld [C4VibSeqDelay], a
-    inc hl
+	ld [CurNoise], a
+	inc hl
+	ld a, [hl]
+	ld [C4VibSeqDelay], a
+	inc hl
 	;Store the new delay and updated pointer in RAM
-    ld a, l
-    ld [C4VibSeq], a
-    ld a, h
-    ld [C4VibSeq+1], a
-    ret
+	ld a, l
+	ld [C4VibSeq], a
+	ld a, h
+	ld [C4VibSeq+1], a
+	ret
 
 
 C4ProcessVibLoop:
 	;Reset the delay to 1
-    ld a, 1
-    ld [C4VibSeqDelay], a
+	ld a, 1
+	ld [C4VibSeqDelay], a
 	;Get the next 2 bytes (pointer) and jump to position
-    inc hl
-    ld a, [hl]
-    ld [C4VibSeq], a
-    inc hl
-    ld a, [hl]
-    ld [C4VibSeq+1], a
-    ret
+	inc hl
+	ld a, [hl]
+	ld [C4VibSeq], a
+	inc hl
+	ld a, [hl]
+	ld [C4VibSeq+1], a
+	ret
 
 
 VCMDTable:
@@ -1458,411 +1460,412 @@ VCMDTable:
 
 GetVCMD:
 ;Get the current voice command (VCMD)
-    sub $60
-    add a
-    push hl
+	sub $60
+	add a
+	push hl
 	;Increment the channel note length/delay
-    dec hl
-    dec hl
-    inc [hl]
+	dec hl
+	dec hl
+	inc [hl]
 	;Get the pointer to the VCMD
-    ld hl, VCMDTable+1
-    add l
-    ld l, a
-    jr nc, .GetVCMD2
+	ld hl, VCMDTable+1
+	add l
+	ld l, a
+	jr nc, .GetVCMD2
 
-    inc h
+	inc h
 
 .GetVCMD2
-    ld a, [hl]
-    dec hl
-    ld l, [hl]
-    ld h, a
-    jp hl
+	ld a, [hl]
+	dec hl
+	ld l, [hl]
+	ld h, a
+	jp hl
 
 EventTie:
 ;Delay the next note by length, increasing note length
 	;Get the note lengths pointer
 	;Parameters: -x (- = unused, x = length)
-    ld hl, NoteLens+1
-    ld a, [hl]
-    dec hl
-    ld l, [hl]
-    ld h, a
-    inc bc
-    ld a, [bc]
+	ld hl, NoteLens+1
+	ld a, [hl]
+	dec hl
+	ld l, [hl]
+	ld h, a
+	inc bc
+	ld a, [bc]
 	;Mask out the upper 4 bits to get the length index
-    and %00001111
-    add l
-    ld l, a
-    jr .EventTie2
+	and %00001111
+	add l
+	ld l, a
+	jr .EventTie2
 
-    inc h
+	inc h
 
 .EventTie2
 	;Get the note length from the pointer
-    ld a, [hl]
-    pop hl
+	ld a, [hl]
+	pop hl
 	;Add the length to the current note length
-    ld de, -2
-    add hl, de
-    ld [hl], a
+	ld de, -2
+	add hl, de
+	ld [hl], a
 	;Update the pointer
-    inc bc
-    inc hl
-    jp UpdatePtr
+	inc bc
+	inc hl
+	jp UpdatePtr
 
 EventStop:
 	;Stop the channel
-    pop hl
+	pop hl
 	;Set the channel play flag to 0
-    ld bc, -3
-    add hl, bc
-    ld a, 0
-    ld [hl], a
-    ret
+	ld bc, -3
+	add hl, bc
+	ld a, 0
+	ld [hl], a
+	ret
 
 EventJump:
 ;Jump to the following pointer (used for looping)
 ;Parameters: xx xx (x = Pointer)
 	;Set the channel note length to 1
-    pop hl
-    ld de, -2
-    add hl, de
-    ld a, 1
-    ld [hl+], a
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
 	;Get the pointer from the next 2 values and load into RAM
-    inc bc
-    ld a, [bc]
-    ld [hl+], a
-    inc bc
-    ld a, [bc]
-    ld [hl], a
-    jp GotoRestart
+	inc bc
+	ld a, [bc]
+	ld [hl+], a
+	inc bc
+	ld a, [bc]
+	ld [hl], a
+	jp GotoRestart
 
 EventNoise:
 ;Change the noise frequency value (NR43)
 ;Parameters: xx (X = Value)
-    pop hl
+	pop hl
 	;Get next noise parameter and load it into RAM
-    inc bc
-    ld a, [bc]
-    ld [CurNoise], a
+	inc bc
+	ld a, [bc]
+	ld [CurNoise], a
 	;Set channel note length to 1
-    ld de, -2
-    add hl, de
-    ld a, 1
+	ld de, -2
+	add hl, de
+	ld a, 1
 	;Update pointer
-    ld [hl+], a
-    inc bc
-    call UpdatePtr
-    jp GotoRestart
+	ld [hl+], a
+	inc bc
+	call UpdatePtr
+	jp GotoRestart
 
 EventMacro:
 ;Go to a macro (subroutine) with transpose for specified number of times
 ;Parameters: xxxx yy zz (X = Pointer, Y = Transpose, Z = Number of times)
 ;(Note: 1 level only)
 	;Set channel length to 1
-    pop hl
-    ld de, -2
-    add hl, de
-    ld a, 1
-    ld [hl+], a
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
 	;Then get macro number from parameter byte
-    inc bc
-    ld a, [bc]
-    sla a
-    jr nc, .EventMacro2
+	inc bc
+	ld a, [bc]
+	sla a
+	jr nc, .EventMacro2
 	;Add to macro table
-    ld de, SongMacroTab
-    inc d
-    jr .EventMacro3
+	ld de, SongMacroTab
+	inc d
+	jr .EventMacro3
 
 .EventMacro2
 	;Add to macro table
-    ld de, SongMacroTab
+	ld de, SongMacroTab
 
 .EventMacro3
-    add e
-    ld e, a
-    jr nc, .EventMacro4
+	add e
+	ld e, a
+	jr nc, .EventMacro4
 
-    inc d
+	inc d
 
 .EventMacro4
-    ld a, [de]
+	ld a, [de]
 	;Load the macro position in RAM
-    ld [hl+], a
-    inc de
-    ld a, [de]
-    ld [hl+], a
+	ld [hl+], a
+	inc de
+	ld a, [de]
+	ld [hl+], a
 	;Now get the macro transpose value and load it into RAM
-    ld d, h
-    ld e, l
-    ld a, $10
-    add e
-    ld e, a
-    jr nc, .EventMacro5
+	ld d, h
+	ld e, l
+	ld a, $10
+	add e
+	ld e, a
+	jr nc, .EventMacro5
 
-    inc d
+	inc d
 
 .EventMacro5
-    inc bc
-    ld a, [bc]
-    ld [de], a
-    inc de
+	inc bc
+	ld a, [bc]
+	ld [de], a
+	inc de
 	;Now check the macro times in RAM
-    ld a, [de]
-    and a
+	ld a, [de]
+	and a
 	;If 0, then get the times in macro
-    jr z, .EventMacro6
+	jr z, .EventMacro6
 
-    inc bc
-    jr .EventMacro7
+	inc bc
+	jr .EventMacro7
 
 .EventMacro6
-    ld a, 1
-    ld [de], a
+	ld a, 1
+	ld [de], a
 	;Now get the number of times in macro and load into RAM (times left)
-    dec de
-    dec de
-    inc bc
-    ld a, [bc]
+	dec de
+	dec de
+	inc bc
+	ld a, [bc]
 	;Subtract 1 to get actual number
-    sub 1
-    ld [de], a
-    inc de
-    inc de
+	sub 1
+	ld [de], a
+	inc de
+	inc de
 
 .EventMacro7
 	;Now store the address to return from the macro into RAM
-    inc bc
-    inc de
-    ld a, c
-    ld [de], a
-    inc de
-    ld a, b
-    ld [de], a
-    jp GotoRestart
+	inc bc
+	inc de
+	ld a, c
+	ld [de], a
+	inc de
+	ld a, b
+	ld [de], a
+	jp GotoRestart
 
 EventMacroRet:
 	;Reset macro transpose to 0
-    inc bc
+	inc bc
 	;Set channel length flag to 1
-    pop hl
-    ld de, -2
-    add hl, de
-    ld a, 1
-    ld [hl+], a
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
 	;Now check for macro times left
-    ld d, h
-    ld e, l
-    ld a, $11
-    add e
-    ld e, a
-    jr nc, .EventMacroRet2
+	ld d, h
+	ld e, l
+	ld a, $11
+	add e
+	ld e, a
+	jr nc, .EventMacroRet2
 
-    inc d
+	inc d
 
 .EventMacroRet2
-    ld a, [de]
-    and a
-    jr z, EventMacroRetEnd
+	ld a, [de]
+	and a
+	jr z, EventMacroRetEnd
 
 	;Otherwise, subtract 1 and jump to macro start
-    sub 1
-    ld [de], a
-    inc de
-    inc de
-    inc de
+	sub 1
+	ld [de], a
+	inc de
+	inc de
+	inc de
 	;Update the position in RAM (use macro return and subtract 4 to get start position)
-    ld a, [de]
-    sub 4
-    ld [hl+], a
-    inc de
-    ld a, [de]
-    jr nc, .EventMacroRet3
+	ld a, [de]
+	sub 4
+	ld [hl+], a
+	inc de
+	ld a, [de]
+	jr nc, .EventMacroRet3
 
-    sub 1
+	sub 1
 
 .EventMacroRet3
 	;Jump to the macro start position
-    ld [hl], a
-    jp GotoRestart
+	ld [hl], a
+	jp GotoRestart
 
 
 EventMacroRetEnd:
 	;Reset macro transpose to 0
-    inc de
-    ld a, 0
+	inc de
+	ld a, 0
 	;And macro times to 0
-    ld [de], a
-    inc de
-    ld [de], a
+	ld [de], a
+	inc de
+	ld [de], a
 	;Set position to return from macro (from RAM)
-    inc de
-    ld a, [de]
-    ld [hl+], a
-    inc de
-    ld a, [de]
-    ld [hl], a
+	inc de
+	ld a, [de]
+	ld [hl+], a
+	inc de
+	ld a, [de]
+	ld [hl], a
 	;Go to start code
-    jp GotoRestart
+	jp GotoRestart
 
 EventCondFlag:
 	;Set a conditional flag (not used by the driver)
 	;Parameters: xx (X = Value)
-    inc bc
-    ld a, [bc]
-    ld [LoopFlag], a
+	inc bc
+	ld a, [bc]
+	ld [LoopFlag], a
 	;Set channel note length to 1
-    pop hl
-    ld de, -2
-    add hl, de
-    ld a, 1
-    ld [hl+], a
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
 	;Update the channel pointer
-    inc bc
-    call UpdatePtr
-    jp GotoRestart
+	inc bc
+	call UpdatePtr
+	jp GotoRestart
 
 EventGlobalPan:
 	;Set global panning
 	;Parameters: xx (X = Value, see NR51 usage)
-    inc bc
-    ld a, [bc]
-    ldh [rNR51], a
-    ld [MasterPan], a
+	inc bc
+	ld a, [bc]
+	ldh [rNR51], a
+	ld [MasterPan], a
 
 ;Reset the note by setting the channel length to 1
 ResetNote:
 	;Set channel note length to 1
-    inc bc
-    pop hl
-    ld de, -2
-    add hl, de
-    ld a, 1
-    ld [hl+], a
+	inc bc
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
 	;Update the channel pointer
-    call UpdatePtr
-    jr GotoRestart
+	call UpdatePtr
+	jr GotoRestart
 
 EventC1Pan:
 ;Set channel 1 panning
 ;Parameters: xx (X = Value, only channel 1 bits are used)
-    inc bc
+	inc bc
 	;Get current panning (NR51) value and mask out channel 1 bits
-    ld a, [MasterPan]
-    and %11101110
-    ld h, a
+	ld a, [MasterPan]
+	and %11101110
+	ld h, a
 	;Mask in parameter values
-    ld a, [bc]
-    or h
+	ld a, [bc]
+	or h
 	;Store new value into RAM and register
-    ld [MasterPan], a
-    ldh [rNR51], a
-    jr ResetNote
+	ld [MasterPan], a
+	ldh [rNR51], a
+	jr ResetNote
 
 EventC2Pan:
 ;Set channel 2 panning
 ;Parameters: xx (X = Value, only channel 2 bits are used)
-    inc bc
+	inc bc
 	;Get current panning (NR51) value and mask out channel 2 bits
-    ld a, [MasterPan]
-    and %11011101
-    ld h, a
+	ld a, [MasterPan]
+	and %11011101
+	ld h, a
 	;Mask in parameter values
-    ld a, [bc]
-    or h
+	ld a, [bc]
+	or h
 	;Store new value into RAM and register
-    ld [MasterPan], a
-    ldh [rNR51], a
-    jr ResetNote
+	ld [MasterPan], a
+	ldh [rNR51], a
+	jr ResetNote
 
 EventC3Pan:
 ;Set channel 3 panning
 ;Parameters: xx (X = Value, only channel 3 bits are used)
-    inc bc
+	inc bc
 	;Get current panning (NR51) value and mask out channel 3 bits
-    ld a, [MasterPan]
-    and %10111011
-    ld h, a
+	ld a, [MasterPan]
+	and %10111011
+	ld h, a
 	;Mask in parameter values
-    ld a, [bc]
-    or h
+	ld a, [bc]
+	or h
 	;Store new value into RAM and register
-    ld [MasterPan], a
-    ldh [rNR51], a
-    jr ResetNote
+	ld [MasterPan], a
+	ldh [rNR51], a
+	jr ResetNote
 
 EventC4Pan:
 ;Set channel 4 panning
 ;Parameters: xx (X = Value, only channel 4 bits are used)
-    inc bc
+	inc bc
 	;Get current panning (NR51) value and mask out channel 4 bits
-    ld a, [MasterPan]
-    and %01110111
-    ld h, a
+	ld a, [MasterPan]
+	and %01110111
+	ld h, a
 	;Mask in parameter values
-    ld a, [bc]
-    or h
+	ld a, [bc]
+	or h
 	;Store new value into RAM and register
-    ld [MasterPan], a
-    ldh [rNR51], a
-    jr ResetNote
+	ld [MasterPan], a
+	ldh [rNR51], a
+	jr ResetNote
 
 EventNoteLens:
 ;Set note lengths from the following pointer (for all channels)
 ;Parameters: xx xx (X = Pointer)
-    inc bc
-    ld a, [bc]
-    ld [NoteLens], a
-    inc bc
-    ld a, [bc]
-    ld [NoteLens+1], a
+	inc bc
+	ld a, [bc]
+	ld [NoteLens], a
+	inc bc
+	ld a, [bc]
+	ld [NoteLens+1], a
 	;Set channel note length to 1
-    pop hl
-    ld de, -2
-    add hl, de
-    ld a, 1
-    ld [hl+], a
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
 	;Update the channel pointer
-    inc bc
-    call UpdatePtr
-    jr GotoRestart
+	inc bc
+	call UpdatePtr
+	jr GotoRestart
 
 EventTempo:
 ;Set the tempo
-    inc bc
-    ld a, [bc]
-    ld [Tempo], a
+;Parameters: x (X = Value)
+	inc bc
+	ld a, [bc]
+	ld [Tempo], a
 	;Set channel note length to 1
-    pop hl
-    ld de, -2
-    add hl, de
-    ld a, 1
-    ld [hl+], a
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
 	;Update the channel pointer
-    inc bc
-    call UpdatePtr
-    jr GotoRestart
+	inc bc
+	call UpdatePtr
+	jr GotoRestart
 
 UpdatePtr:
-    ld [hl], c
-    inc hl
-    ld [hl], b
-    ret
+	ld [hl], c
+	inc hl
+	ld [hl], b
+	ret
 
 
 GotoRestart:
-    pop hl
-    ld de, CurRestartPos
-    ld a, [de]
-    ld l, a
-    inc de
-    ld a, [de]
-    ld h, a
-    jp hl
+	pop hl
+	ld de, CurRestartPos
+	ld a, [de]
+	ld l, a
+	inc de
+	ld a, [de]
+	ld h, a
+	jp hl
 
 
 FreqsLo:
@@ -1887,312 +1890,312 @@ FreqsHi:
 
 GetSFXMacro:
 	;Get SFX macro pointer from table
-    ld hl, SFXMacroTab
-    sla a
-    add l
-    ld l, a
-    jr nc, InitSFX
+	ld hl, SFXMacroTab
+	sla a
+	add l
+	ld l, a
+	jr nc, InitSFX
 
-    inc h
+	inc h
 
 InitSFX:
 	;Go to SFX pointer
-    ld a, [hl]
-    ld c, a
-    inc hl
-    ld a, [hl]
-    ld b, a
+	ld a, [hl]
+	ld c, a
+	inc hl
+	ld a, [hl]
+	ld b, a
 	;Enable all channels
-    ld a, %10001111
-    ldh [rNR52], a
+	ld a, %10001111
+	ldh [rNR52], a
 	;Check the channel number
-    ld a, [bc]
-    inc bc
+	ld a, [bc]
+	inc bc
 	
 	;Is it channel 2?
-    cp 1
-    jr z, InitSFXC2
+	cp 1
+	jr z, InitSFXC2
 
 	;Is it channel 3?
-    cp 2
-    jr z, InitSFXC3
+	cp 2
+	jr z, InitSFXC3
 
 	;Is it channel 4?
-    cp 3
-    jr z, InitSFXC4
+	cp 3
+	jr z, InitSFXC4
 
 	;Otherwise, it is channel 1
 InitSFXC1:
 	;Set panning
-    ld a, [MasterPan]
-    ld d, a
-    ld a, %00010001
-    or d
-    ld [MasterSFXPan], a
+	ld a, [MasterPan]
+	ld d, a
+	ld a, %00010001
+	or d
+	ld [MasterSFXPan], a
 	;Enable SFX playback with flag
-    ld a, [C1PlayFlag]
-    and %11111110
-    ld [C1PlayFlag], a
+	ld a, [C1PlayFlag]
+	and %11111110
+	ld [C1PlayFlag], a
 	;Go to SFX position from RAM
-    ld a, c
-    ld [C1SFXPos], a
-    ld a, b
-    ld [C1SFXPos+1], a
+	ld a, c
+	ld [C1SFXPos], a
+	ld a, b
+	ld [C1SFXPos+1], a
 	;Set SFX channel delay
-    ld a, 2
-    ld [C1SFXDelay], a
-    jr PlaySFXC1
+	ld a, 2
+	ld [C1SFXDelay], a
+	jr PlaySFXC1
 
 InitSFXC2:
 	;Set panning
-    ld a, [MasterPan]
-    ld d, a
-    ld a, %00100010
-    or d
-    ld [MasterSFXPan], a
+	ld a, [MasterPan]
+	ld d, a
+	ld a, %00100010
+	or d
+	ld [MasterSFXPan], a
 	;Enable SFX playback with flag
-    ld a, [C2PlayFlag]
-    and %11111110
-    ld [C2PlayFlag], a
+	ld a, [C2PlayFlag]
+	and %11111110
+	ld [C2PlayFlag], a
 	;Enable SFX playback with flag
-    ld a, c
-    ld [C2SFXPos], a
-    ld a, b
-    ld [C2SFXPos+1], a
+	ld a, c
+	ld [C2SFXPos], a
+	ld a, b
+	ld [C2SFXPos+1], a
 	;Set SFX channel delay
-    ld a, 2
-    ld [C2SFXDelay], a
-    jr PlaySFXC1
+	ld a, 2
+	ld [C2SFXDelay], a
+	jr PlaySFXC1
 
 InitSFXC3:
 	;Set panning
-    ld a, [MasterPan]
-    ld d, a
-    ld a, %01000100
-    or d
-    ld [MasterSFXPan], a
+	ld a, [MasterPan]
+	ld d, a
+	ld a, %01000100
+	or d
+	ld [MasterSFXPan], a
 	;Enable SFX playback with flag
-    ld a, [C3PlayFlag]
-    and %11111110
-    ld [C3PlayFlag], a
+	ld a, [C3PlayFlag]
+	and %11111110
+	ld [C3PlayFlag], a
 	;Go to SFX position from RAM
-    ld a, c
-    ld [C3SFXPos], a
-    ld a, b
-    ld [C3SFXPos+1], a
+	ld a, c
+	ld [C3SFXPos], a
+	ld a, b
+	ld [C3SFXPos+1], a
 	;Set SFX channel delay
-    ld a, 2
-    ld [C3SFXDelay], a
-    jr PlaySFXC1
+	ld a, 2
+	ld [C3SFXDelay], a
+	jr PlaySFXC1
 
 InitSFXC4:
 	;Set panning
-    ld a, [MasterPan]
-    ld d, a
-    ld a, %10001000
-    or d
-    ld [MasterSFXPan], a
+	ld a, [MasterPan]
+	ld d, a
+	ld a, %10001000
+	or d
+	ld [MasterSFXPan], a
 	;Enable SFX playback with flag
-    ld a, [C4PlayFlag]
-    and %11111110
-    ld [C4PlayFlag], a
+	ld a, [C4PlayFlag]
+	and %11111110
+	ld [C4PlayFlag], a
 	;Go to SFX position from RAM
-    ld a, c
-    ld [C4SFXPos], a
-    ld a, b
-    ld [C4SFXPos+1], a
+	ld a, c
+	ld [C4SFXPos], a
+	ld a, b
+	ld [C4SFXPos+1], a
 	;Set SFX channel delay
-    ld a, 2
-    ld [C4SFXDelay], a
+	ld a, 2
+	ld [C4SFXDelay], a
 
 ;Play the current sound effect, starting with channel 1 if present
 PlaySFXC1:
-    ld hl, C1PlayFlag
-    ld a, l
-    ld [CurSFX], a
-    ld a, h
-    ld [CurSFX+1], a
-    ld hl, C1SFXPos
-    ld c, [hl]
-    inc hl
-    ld b, [hl]
-    ld a, b
-    or c
+	ld hl, C1PlayFlag
+	ld a, l
+	ld [CurSFX], a
+	ld a, h
+	ld [CurSFX+1], a
+	ld hl, C1SFXPos
+	ld c, [hl]
+	inc hl
+	ld b, [hl]
+	ld a, b
+	or c
 	;If not present (0 value), then go to next channel
-    jr z, PlaySFXC2
+	jr z, PlaySFXC2
 
 	;Otherwise, then play SFX
-    ld de, rNR11
-    call CheckSFX
+	ld de, rNR11
+	call CheckSFX
 
 PlaySFXC2:
-    ld hl, C2PlayFlag
-    ld a, l
-    ld [CurSFX], a
-    ld a, h
-    ld [CurSFX+1], a
-    ld hl, C2SFXPos
-    ld c, [hl]
-    inc hl
-    ld b, [hl]
-    ld a, b
-    or c
+	ld hl, C2PlayFlag
+	ld a, l
+	ld [CurSFX], a
+	ld a, h
+	ld [CurSFX+1], a
+	ld hl, C2SFXPos
+	ld c, [hl]
+	inc hl
+	ld b, [hl]
+	ld a, b
+	or c
 	;If not present (0 value), then go to next channel
-    jr z, PlaySFXC3
+	jr z, PlaySFXC3
 
-    ld de, rNR21
-    call CheckSFX
+	ld de, rNR21
+	call CheckSFX
 
 PlaySFXC3:
-    ld hl, C3PlayFlag
-    ld a, l
-    ld [CurSFX], a
-    ld a, h
-    ld [CurSFX+1], a
-    ld hl, C3SFXPos
-    ld c, [hl]
-    inc hl
-    ld b, [hl]
-    ld a, b
-    or c
+	ld hl, C3PlayFlag
+	ld a, l
+	ld [CurSFX], a
+	ld a, h
+	ld [CurSFX+1], a
+	ld hl, C3SFXPos
+	ld c, [hl]
+	inc hl
+	ld b, [hl]
+	ld a, b
+	or c
 	;If not present (0 value), then go to next channel
-    jr z, PlaySFXC4
+	jr z, PlaySFXC4
 
-    ld de, rNR31
-    call CheckSFX
+	ld de, rNR31
+	call CheckSFX
 
 PlaySFXC4:
-    ld hl, C4PlayFlag
-    ld a, l
-    ld [CurSFX], a
-    ld a, h
-    ld [CurSFX+1], a
-    ld hl, C4SFXPos
-    ld c, [hl]
-    inc hl
-    ld b, [hl]
-    ld a, b
-    or c
+	ld hl, C4PlayFlag
+	ld a, l
+	ld [CurSFX], a
+	ld a, h
+	ld [CurSFX+1], a
+	ld hl, C4SFXPos
+	ld c, [hl]
+	inc hl
+	ld b, [hl]
+	ld a, b
+	or c
 	;If not present (0 value), then return
-    jr z, PlaySFXRet
+	jr z, PlaySFXRet
 
-    ld de, rNR41
-    call CheckSFX
+	ld de, rNR41
+	call CheckSFX
 
 ;Return from SFX routine
 PlaySFXRet:
-    ret
+	ret
 
 
 CheckSFX:
 	;Set the panning for SFX
-    ld a, [MasterSFXPan]
-    ldh [rNR51], a
+	ld a, [MasterSFXPan]
+	ldh [rNR51], a
 	;Check if channel is ready
-    inc hl
-    dec [hl]
+	inc hl
+	dec [hl]
 	;If so, then continue
-    jr z, GetNextSFXCMD
+	jr z, GetNextSFXCMD
 
 	;Otherwise, return
-    ret
+	ret
 
 
 GetNextSFXCMD:
 	;Get the next SFX command
-    ld a, [bc]
+	ld a, [bc]
 	;Is it a stop command (FF)?
-    cp $FF
-    jr z, SFXEventStop
+	cp $FF
+	jr z, SFXEventStop
 
 	;Is it a jump command (FE)?
-    cp $FE
-    jr z, SFXEventJump
+	cp $FE
+	jr z, SFXEventJump
 
 	;Otherwise...
 	;Byte 1 = Delay
-    ld [hl], a
+	ld [hl], a
 	;Byte 2 = NRx1 (Channel length/duty)
-    inc bc
-    ld a, [bc]
-    ld [de], a
+	inc bc
+	ld a, [bc]
+	ld [de], a
 	;Byte 3 = NRx2 (Volume/envelope)
-    inc bc
-    inc de
-    ld a, [bc]
-    ld [de], a
+	inc bc
+	inc de
+	ld a, [bc]
+	ld [de], a
 	;Byte 4 = NRx4 (Period high/control)
-    inc bc
-    inc de
-    inc de
-    ld a, [bc]
-    ld [de], a
+	inc bc
+	inc de
+	inc de
+	ld a, [bc]
+	ld [de], a
 	;Byte 5 = NRx3 (Period low)
-    inc bc
-    dec de
-    ld a, [bc]
-    ld [de], a
-    inc bc
+	inc bc
+	dec de
+	ld a, [bc]
+	ld [de], a
+	inc bc
 
 SFXUpdatePtr:
 ;Update the pointer
-    dec hl
-    ld [hl], b
-    dec hl
-    ld [hl], c
-    ret
+	dec hl
+	ld [hl], b
+	dec hl
+	ld [hl], c
+	ret
 
 
 SFXEventStop:
 ;Stop the macro
 	;Reset the pointer
-    ld a, 0
-    dec hl
-    ld [hl], a
-    dec hl
-    ld [hl], a
+	ld a, 0
+	dec hl
+	ld [hl], a
+	dec hl
+	ld [hl], a
 	;Get the current channel's play flag
-    ld hl, CurSFX
-    ld c, [hl]
-    inc hl
-    ld b, [hl]
+	ld hl, CurSFX
+	ld c, [hl]
+	inc hl
+	ld b, [hl]
 
 	;Check if panning is zero
-    ld a, [bc]
-    and %00000010
-    jp z, SFXRestorePan
+	ld a, [bc]
+	and %00000010
+	jp z, SFXRestorePan
 
 	;Reset it to 3 (music)
-    ld a, [bc]
-    or %00000001
-    ld [bc], a
+	ld a, [bc]
+	or %00000001
+	ld [bc], a
 
 SFXRestorePan:
 	;Restore the original panning
-    ld a, [MasterPan]
-    ldh [rNR51], a
-    ret
+	ld a, [MasterPan]
+	ldh [rNR51], a
+	ret
 
 
 SFXEventJump:
 	;Load the loop position from the following 2 bytes as the position
-    inc bc
-    ld a, [bc]
-    ld e, a
-    inc bc
-    ld a, [bc]
-    ld b, a
-    ld c, e
+	inc bc
+	ld a, [bc]
+	ld e, a
+	inc bc
+	ld a, [bc]
+	ld b, a
+	ld c, e
 	;Reset SFX channel play flag to 1
-    ld a, 1
-    ld [hl], a
-    jr SFXUpdatePtr
+	ld a, 1
+	ld [hl], a
+	jr SFXUpdatePtr
 
 Waveform:
-    db $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $00, $00, $00, $00, $00, $00, $00, $00
+	db $AA, $AA, $AA, $AA, $AA, $AA, $AA, $AA, $00, $00, $00, $00, $00, $00, $00, $00
 
 SFXMacroTab:
-    dw SFXMacro00
+	dw SFXMacro00
 	dw SFXMacro01
 	dw SFXMacro02
 	dw SFXMacro03
@@ -2200,7 +2203,7 @@ SFXMacroTab:
 	dw SFXMacro05
 	dw SFXMacro06
 	dw SFXMacro07
-    dw SFXMacro08
+	dw SFXMacro08
 	dw SFXMacro09
 	dw SFXMacro0A
 	dw SFXMacro0B
@@ -2208,7 +2211,7 @@ SFXMacroTab:
 	dw SFXMacro0D
 	dw SFXMacro0E
 	dw SFXMacro0F
-    dw SFXMacro10
+	dw SFXMacro10
 	dw SFXMacro11
 	dw SFXMacro12
 	dw SFXMacro13
@@ -2216,7 +2219,7 @@ SFXMacroTab:
 	dw SFXMacro15
 	dw SFXMacro16
 	dw SFXMacro17
-    dw SFXMacro18
+	dw SFXMacro18
 	dw SFXMacro19
 	dw SFXMacro1A
 	dw SFXMacro1B
@@ -2224,7 +2227,7 @@ SFXMacroTab:
 	dw SFXMacro1D
 	dw SFXMacro1E
 	dw SFXMacro1F
-    dw SFXMacro20
+	dw SFXMacro20
 	dw SFXMacro21
 	dw SFXMacro22
 	dw SFXMacro23
@@ -2232,7 +2235,7 @@ SFXMacroTab:
 	dw SFXMacro25
 	dw SFXMacro26
 	dw SFXMacro27
-    dw SFXMacro28
+	dw SFXMacro28
 	dw SFXMacro29
 	dw SFXMacro2A
 	dw SFXMacro2B
@@ -2240,7 +2243,7 @@ SFXMacroTab:
 	dw SFXMacro2D
 	dw SFXMacro2E
 	dw SFXMacro2F
-    dw SFXMacro30
+	dw SFXMacro30
 	dw SFXMacro31
 	dw SFXMacro32
 	dw SFXMacro33
@@ -2248,7 +2251,7 @@ SFXMacroTab:
 	dw SFXMacro35
 	dw SFXMacro36
 	dw SFXMacro37
-    dw SFXMacro38
+	dw SFXMacro38
 	dw SFXMacro39
 	dw SFXMacro3A
 	dw SFXMacro3B
@@ -2256,7 +2259,7 @@ SFXMacroTab:
 	dw SFXMacro3D
 	dw SFXMacro3E
 	dw SFXMacro3F
-    dw SFXMacro40
+	dw SFXMacro40
 	dw SFXMacro41
 	dw SFXMacro42
 	dw SFXMacro43
@@ -2264,7 +2267,7 @@ SFXMacroTab:
 	dw SFXMacro45
 	dw SFXMacro46
 	dw SFXMacro47
-    dw SFXMacro48
+	dw SFXMacro48
 	dw SFXMacro49
 	dw SFXMacro4A
 	dw SFXMacro4B
@@ -2272,7 +2275,7 @@ SFXMacroTab:
 	dw SFXMacro4D
 	dw SFXMacro4E
 	dw SFXMacro4F
-    dw SFXMacro50
+	dw SFXMacro50
 	dw SFXMacro51
 	dw SFXMacro52
 	dw SFXMacro53
@@ -2280,7 +2283,7 @@ SFXMacroTab:
 	dw SFXMacro55
 	dw SFXMacro56
 	dw SFXMacro57
-    dw SFXMacro58
+	dw SFXMacro58
 	dw SFXMacro59
 	dw SFXMacro5A
 	dw SFXMacro5B
@@ -2290,7 +2293,7 @@ SFXMacroTab:
 	dw SFXMacro5F
 SFXTab:
 .SFXMenuSelect
-    db $00, $FF, $FF, $FF
+	db $00, $FF, $FF, $FF
 .SFXConfirm
 	db $01, $FF, $FF, $FF
 .PasswordAccepted
@@ -2298,7 +2301,7 @@ SFXTab:
 .PasswordRejected
 	db $03, $04, $FF, $FF
 .ExtraHealth
-    db $05, $FF, $FF, $FF
+	db $05, $FF, $FF, $FF
 .RocketPickup
 	db $06, $07, $FF, $FF
 .RocketExplode
@@ -2306,7 +2309,7 @@ SFXTab:
 .RocketShoot
 	db $09, $FF, $FF, $FF
 .RocketLowFuel
-    db $0A, $FF, $FF, $FF
+	db $0A, $FF, $FF, $FF
 .Jump
 	db $0B, $FF, $FF, $FF
 .Land
@@ -2314,7 +2317,7 @@ SFXTab:
 .Snott
 	db $0D, $FF, $FF, $FF
 .Switch1
-    db $0E, $FF, $FF, $FF
+	db $0E, $FF, $FF, $FF
 .Switch2
 	db $0F, $FF, $FF, $FF
 .DoubleJump
@@ -2322,7 +2325,7 @@ SFXTab:
 .Coin1
 	db $11, $FF, $FF, $FF
 .Coin2
-    db $12, $FF, $FF, $FF
+	db $12, $FF, $FF, $FF
 .SelectWeapon
 	db $13, $FF, $FF, $FF
 .ExtraLife
@@ -2330,7 +2333,7 @@ SFXTab:
 .ToiletPortal
 	db $15, $16, $FF, $FF
 .SnottBounce
-    db $17, $18, $FF, $FF
+	db $17, $18, $FF, $FF
 .DoorShut
 	db $19, $FF, $FF, $FF
 .EnemyHit
@@ -2338,7 +2341,7 @@ SFXTab:
 .PortalLocked1
 	db $1B, $1C, $FF, $FF
 .PortalLocked2
-    db $1D, $1E, $FF, $FF
+	db $1D, $1E, $FF, $FF
 .Alarm
 	db $1F, $FF, $FF, $FF
 .DoNotUse
@@ -2346,7 +2349,7 @@ SFXTab:
 .BossDefeated
 	db $21, $22, $23, $FF
 .Cannon1
-    db $24, $25, $FF, $FF
+	db $24, $25, $FF, $FF
 .Cannon2
 	db $26, $25, $FF, $FF
 .Asteroid
@@ -2354,7 +2357,7 @@ SFXTab:
 .DoorOpen
 	db $28, $29, $FF, $FF
 .Cannon3
-    db $2A, $FF, $FF, $FF
+	db $2A, $FF, $FF, $FF
 .Slide
 	db $2B, $2C, $FF, $FF
 .Pickup1
@@ -2362,7 +2365,7 @@ SFXTab:
 .Pickup2
 	db $2E, $FF, $FF, $FF
 .Pickup3
-    db $2F, $30, $FF, $FF
+	db $2F, $30, $FF, $FF
 .Pickup4
 	db $31, $FF, $FF, $FF
 .Teleport
@@ -2370,7 +2373,7 @@ SFXTab:
 .EnemyDie
 	db $34, $35, $36, $FF
 .FallHole
-    db $37, $FF, $FF, $FF
+	db $37, $FF, $FF, $FF
 .AllCoinsCollected
 	db $38, $39, $3A, $FF
 .GunFire1
@@ -2378,7 +2381,7 @@ SFXTab:
 .GunFire2
 	db $3D, $3E, $FF, $FF
 .GunFire3
-    db $3F, $40, $41, $FF
+	db $3F, $40, $41, $FF
 .GunFire4
 	db $42, $43, $FF, $FF
 .JimDown
@@ -2386,7 +2389,7 @@ SFXTab:
 .JimHit1
 	db $47, $48, $FF, $FF
 .JimHit2
-    db $49, $4A, $FF, $FF
+	db $49, $4A, $FF, $FF
 .JimHit3
 	db $4B, $FF, $FF, $FF
 .BossHit1
@@ -2394,7 +2397,7 @@ SFXTab:
 .Rumble
 	db $4E, $FF, $FF, $FF
 .BossHit2
-    db $4F, $50, $FF, $FF
+	db $4F, $50, $FF, $FF
 .EvilJimRocket
 	db $51, $52, $FF, $FF
 .BossExplode1
@@ -2402,7 +2405,7 @@ SFXTab:
 .BossExplode2
 	db $54, $55, $FF, $FF
 .Snap1
-    db $56, $57, $FF, $FF
+	db $56, $57, $FF, $FF
 .Snap2
 	db $58, $59, $FF, $FF
 .BabyFire
@@ -2411,11 +2414,11 @@ SFXTab:
 	db $5C, $5D, $5E, $5F
 	
 SFXMacro00:
-    db 1
+	db 1
 	db 1, $80, $F0, $87, $BE
 	db 1, $80, $70, $87, $B6
 	db 1, $80, $F0, $87, $BE
-    db 1, $80, $70, $87, $B6
+	db 1, $80, $70, $87, $B6
 	db 1, $80, $F0, $87, $BE
 	db 1, $80, $70, $87, $B6
 	db 1, $80, $F0, $87, $BE
@@ -2431,7 +2434,7 @@ SFXMacro01:
 	db 1, $80, $A0, $87, $9D
 	db 1, $80, $90, $87, $3A
 	db 2, $80, $80, $87, $9D
-    db 2, $80, $70, $87, $3A
+	db 2, $80, $70, $87, $3A
 	db 2, $80, $60, $87, $9D
 	db 3, $80, $50, $87, $3A
 	db 3, $80, $40, $87, $9D
@@ -2447,7 +2450,7 @@ SFXMacro02:
 	db 1, $80, $80, $86, $9E
 	db 1, $80, $90, $86, $C5
 	db 1, $80, $A0, $86, $E7
-    db 1, $80, $B0, $86, $F7
+	db 1, $80, $B0, $86, $F7
 	db 1, $80, $C0, $87, $06
 	db 1, $80, $D0, $87, $14
 	db 2, $80, $F0, $87, $8A
@@ -2463,7 +2466,7 @@ SFXMacro03:
 SFXMacro04:
 	db 1
 	db 2, $80, $F0, $82, $23
-    db 30, $40, $80, $82, $23
+	db 30, $40, $80, $82, $23
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro05:
@@ -2479,7 +2482,7 @@ SFXMacro05:
 	db 2, $80, $40, $86, $C5
 	db 2, $80, $80, $87, $63
 	db 2, $80, $40, $86, $E7
-    db 2, $80, $80, $87, $74
+	db 2, $80, $80, $87, $74
 	db 2, $80, $40, $87, $06
 	db 2, $80, $80, $87, $83
 	db 2, $80, $40, $87, $14
@@ -2496,7 +2499,7 @@ SFXMacro05:
 SFXMacro06:
 	db 1
 SFXMacro06Loop:
-    db 6, $80, $A4, $87, $97
+	db 6, $80, $A4, $87, $97
 	db 6, $80, $A4, $87, $AD
 	db 6, $80, $A4, $87, $BA
 	db 6, $80, $A4, $87, $74
@@ -2521,7 +2524,7 @@ SFXMacro08:
 	db 5, $00, $80, $80, $34
 	db 1, $00, $00, $00, $00
 	db 2, $00, $90, $80, $34
-    db 2, $00, $00, $00, $00
+	db 2, $00, $00, $00, $00
 	db 3, $00, $C0, $80, $34
 	db 1, $00, $00, $00, $00
 	db 4, $00, $90, $80, $42
@@ -2537,7 +2540,7 @@ SFXMacro09:
 	db 5, $00, $40, $80, $43
 	db 4, $00, $50, $80, $42
 	db 3, $00, $60, $80, $35
-    db 5, $00, $70, $80, $34
+	db 5, $00, $70, $80, $34
 	db 4, $00, $80, $80, $33
 	db 80, $00, $97, $80, $32
 	db $FE
@@ -2570,7 +2573,7 @@ SFXMacro0BLoop:
 	db 1, $80, $40, $83, $4C
 	db 1, $80, $40, $83, $56
 	db 1, $80, $40, $83, $60
-    db 1, $80, $30, $83, $6A
+	db 1, $80, $30, $83, $6A
 	db 1, $80, $30, $83, $78
 	db 1, $80, $30, $83, $87
 	db 1, $80, $30, $83, $A0
@@ -2586,7 +2589,7 @@ SFXMacro0BLoop:
 	dw SFXMacro5CLoop
 SFXMacro0C:
 	db 3
-    db 3, $00, $F0, $80, $63
+	db 3, $00, $F0, $80, $63
 	db 30, $00, $C1, $80, $63
 	db $FE
 	dw SFXMacro5CLoop
@@ -2619,11 +2622,11 @@ SFXMacro10:
 .SFXMacro10Loop
 	db 4, $80, $F0, $83, $32
 	db 1, $80, $C0, $83, $3C
-    db 1, $80, $80, $83, $46
+	db 1, $80, $80, $83, $46
 	db 1, $80, $60, $83, $50
 	db 1, $80, $40, $83, $5A
 	db $FE
-    dw SFXMacro0BLoop
+	dw SFXMacro0BLoop
 SFXMacro11:
 	db 1
 	db 2, $80, $F0, $87, $BE
@@ -2651,7 +2654,7 @@ SFXMacro14:
 	db 1
 	db 4, $80, $F1, $87, $3A
 	db 4, $80, $F1, $87, $7C
-    db 4, $80, $F1, $87, $63
+	db 4, $80, $F1, $87, $63
 	db 4, $80, $F1, $87, $9D
 	db 4, $80, $F1, $87, $7C
 	db 4, $80, $F1, $87, $B1
@@ -2667,7 +2670,7 @@ SFXMacro15:
 SFXMacro16:
 	db 1
 	db 80, $80, $1C, $81, $6D
-    db 100, $80, $F7, $81, $77
+	db 100, $80, $F7, $81, $77
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro17:
@@ -2683,11 +2686,11 @@ SFXMacro18:
 SFXMacro19:
 	db 3
 	db 5, $00, $F4, $80, $46
-    db 5, $00, $F4, $00, $44
+	db 5, $00, $F4, $00, $44
 	db 5, $00, $F4, $00, $42
 	db 20, $00, $A1, $80, $44
 	db $FE
-    dw SFXMacro5CLoop
+	dw SFXMacro5CLoop
 SFXMacro1A:
 	db 3
 	db 4, $00, $F0, $80, $71
@@ -2699,11 +2702,11 @@ SFXMacro1A:
 	dw SFXMacro5CLoop
 SFXMacro1B:
 	db 1
-    db 10, $00, $19, $81, $6B
+	db 10, $00, $19, $81, $6B
 	db 30, $00, $F2, $84, $B6
 	db 30, $00, $F2, $87, $CC
 	db $FE
-    dw SFXMacro5CLoop
+	dw SFXMacro5CLoop
 SFXMacro1C:
 	db 0
 	db 10, $00, $19, $81, $6C
@@ -2715,7 +2718,7 @@ SFXMacro1D:
 	db 1
 	db 10, $00, $19, $87, $CC
 	db 30, $00, $F2, $84, $B6
-    db 30, $00, $F2, $81, $6B
+	db 30, $00, $F2, $81, $6B
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro1E:
@@ -2732,11 +2735,11 @@ SFXMacro1F:
 	db 2, $00, $A0, $87, $E4
 	db 1, $00, $A0, $87, $E5
 	db 1, $00, $A0, $87, $E6
-    db 2, $00, $A0, $87, $E5
+	db 2, $00, $A0, $87, $E5
 	db 1, $00, $A0, $87, $E7
 	db 3, $00, $00, $87, $E8
 	db $FE
-    dw .SFXMacro1FLoop
+	dw .SFXMacro1FLoop
 SFXMacro20:
 	db 1
 	db $FE
@@ -2748,7 +2751,7 @@ SFXMacro21:
 	db 10, $40, $A2, $87, $14
 	db 10, $40, $A2, $87, $2E
 	db 10, $40, $A2, $87, $14
-    db 10, $40, $A2, $87, $2E
+	db 10, $40, $A2, $87, $2E
 	db 64, $40, $A7, $87, $45
 	db $FE
 	dw SFXMacro5CLoop
@@ -2760,7 +2763,7 @@ SFXMacro22:
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro23:
-    db 2
+	db 2
 	db 30, $00, $20, $84, $4F
 	db 30, $00, $20, $85, $89
 	db 64, $00, $40, $85, $12
@@ -2780,11 +2783,11 @@ SFXMacro25:
 	dw SFXMacro5CLoop
 SFXMacro26:
 	db 3
-    db 6, $00, $F0, $80, $47
+	db 6, $00, $F0, $80, $47
 	db 30, $00, $84, $80, $47
 	db 20, $00, $10, $80, $47
 	db $FE
-    dw SFXMacro5CLoop
+	dw SFXMacro5CLoop
 SFXMacro27:
 	db 3
 	db 2, $00, $F0, $80, $61
@@ -2812,7 +2815,7 @@ SFXMacro29:
 	db 1
 	db 9, $00, $00, $00, $00
 	db 10, $00, $0A, $87, $E3
-    db $FE
+	db $FE
 	dw SFXMacro5CLoop
 SFXMacro2A:
 	db 3
@@ -2828,7 +2831,7 @@ SFXMacro2B:
 	db 1, $80, $60, $87, $7C
 	db 1, $80, $80, $87, $80
 	db 1, $80, $A0, $87, $84
-    db 2, $80, $C0, $87, $88
+	db 2, $80, $C0, $87, $88
 	db 1, $80, $F0, $87, $8C
 	db 1, $80, $E0, $87, $90
 	db 1, $80, $D0, $87, $94
@@ -2904,11 +2907,11 @@ SFXMacro31B:
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro32:
-    db 0
+	db 0
 	db 2, $80, $50, $84, $4F
 	db 2, $80, $60, $84, $B6
 	db 2, $80, $70, $85, $12
-    db 2, $80, $90, $85, $3C
+	db 2, $80, $90, $85, $3C
 	db 2, $80, $B0, $85, $89
 	db 2, $80, $D0, $85, $CE
 	db 4, $80, $C0, $87, $8A
@@ -2924,7 +2927,7 @@ SFXMacro32:
 	dw SFXMacro5CLoop
 SFXMacro33:
 	db 1
-    db 2, $80, $50, $85, $12
+	db 2, $80, $50, $85, $12
 	db 2, $80, $60, $85, $64
 	db 2, $80, $70, $85, $89
 	db 2, $80, $90, $85, $CE
@@ -2972,7 +2975,7 @@ SFXMacro35:
 SFXMacro36:
 	db 3
 	db 35, $00, $00, $00, $00
-    db 30, $00, $F1, $80, $62
+	db 30, $00, $F1, $80, $62
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro37:
@@ -2988,7 +2991,7 @@ SFXMacro37:
 	db 2, $80, $F0, $87, $3C
 	db 2, $80, $D0, $87, $37
 	db 2, $80, $C0, $87, $32
-    db 2, $80, $A0, $87, $2D
+	db 2, $80, $A0, $87, $2D
 	db 2, $80, $70, $87, $28
 	db 2, $80, $50, $87, $23
 	db 2, $80, $30, $87, $1E
@@ -3004,7 +3007,7 @@ SFXMacro38:
 	db 8, $80, $F1, $86, $E7
 	db 8, $80, $F1, $86, $E7
 	db 8, $80, $F1, $86, $E7
-    db 8, $80, $F1, $87, $06
+	db 8, $80, $F1, $87, $06
 	db 8, $80, $F1, $87, $06
 	db 8, $80, $F1, $87, $06
 	db 80, $80, $F7, $86, $D7
@@ -3020,7 +3023,7 @@ SFXMacro39:
 	db 8, $80, $F1, $87, $21
 	db 8, $80, $F1, $87, $3A
 	db 8, $80, $F1, $87, $3A
-    db 8, $80, $F1, $87, $3A
+	db 8, $80, $F1, $87, $3A
 	db 8, $80, $F1, $87, $6C
 	db 8, $80, $F1, $87, $45
 	db 8, $80, $F1, $86, $D7
@@ -3052,7 +3055,7 @@ SFXMacro3B:
 	db 2, $00, $30, $80, $44
 	db 2, $00, $20, $80, $45
 	db 4, $00, $10, $80, $60
-    db $FE
+	db $FE
 	dw SFXMacro5CLoop
 SFXMacro3C:
 	db 1
@@ -3068,7 +3071,7 @@ SFXMacro3D:
 	db 1, $00, $A0, $80, $42
 	db 1, $00, $90, $80, $43
 	db 1, $00, $80, $80, $44
-    db 1, $00, $70, $80, $45
+	db 1, $00, $70, $80, $45
 	db 1, $00, $60, $80, $21
 	db 1, $00, $50, $80, $45
 	db 1, $00, $40, $80, $21
@@ -3084,7 +3087,7 @@ SFXMacro3E:
 	db 1, $80, $60, $83, $BE
 	db 1, $80, $F0, $83, $B4
 	db 1, $80, $F0, $83, $AA
-    db 2, $80, $F0, $83, $A0
+	db 2, $80, $F0, $83, $A0
 	db 1, $80, $F0, $83, $96
 	db 1, $80, $C0, $83, $8C
 	db 1, $80, $B0, $83, $82
@@ -3100,7 +3103,7 @@ SFXMacro3F:
 SFXMacro40:
 	db 1
 	db 38, $C0, $1C, $81, $0C
-    db 18, $40, $F1, $81, $0C
+	db 18, $40, $F1, $81, $0C
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro41:
@@ -3116,7 +3119,7 @@ SFXMacro42:
 	db 6, $00, $20, $80, $61
 	db 5, $00, $30, $80, $60
 	db 5, $00, $40, $80, $47
-    db 5, $00, $50, $80, $46
+	db 5, $00, $50, $80, $46
 	db 4, $00, $60, $80, $45
 	db 5, $00, $70, $80, $44
 	db 6, $00, $80, $80, $43
@@ -3132,7 +3135,7 @@ SFXMacro44:
 	db 1
 	db 5, $80, $A1, $86, $E7
 	db 5, $80, $A1, $86, $D7
-    db 5, $80, $A1, $86, $C5
+	db 5, $80, $A1, $86, $C5
 	db 5, $80, $A1, $86, $B2
 	db 5, $80, $A1, $86, $9E
 	db 5, $80, $A1, $86, $89
@@ -3148,7 +3151,7 @@ SFXMacro44:
 SFXMacro45:
 	db 0
 	db 5, $80, $A1, $86, $F7
-    db 5, $80, $A1, $86, $E7
+	db 5, $80, $A1, $86, $E7
 	db 5, $80, $A1, $86, $D7
 	db 5, $80, $A1, $86, $C5
 	db 5, $80, $A1, $86, $B2
@@ -3164,7 +3167,7 @@ SFXMacro45:
 	dw SFXMacro5CLoop
 SFXMacro46:
 	db 2
-    db 30, $00, $20, $85, $CE
+	db 30, $00, $20, $85, $CE
 	db 35, $00, $20, $85, $12
 	db 15, $00, $20, $83, $9C
 	db 15, $00, $40, $83, $9C
@@ -3180,7 +3183,7 @@ SFXMacro47:
 	db 2, $00, $D0, $84, $3C
 	db 1, $00, $10, $84, $32
 	db 2, $00, $C0, $84, $28
-    db 1, $00, $10, $84, $1E
+	db 1, $00, $10, $84, $1E
 	db 2, $00, $B0, $84, $14
 	db $FE
 	dw SFXMacro5CLoop
@@ -3212,7 +3215,7 @@ SFXMacro49:
 	dw SFXMacro5CLoop
 SFXMacro4A:
 	db 0
-    db 1, $00, $F0, $85, $64
+	db 1, $00, $F0, $85, $64
 	db 1, $00, $10, $85, $5A
 	db 1, $00, $E0, $85, $50
 	db 1, $00, $10, $85, $46
@@ -3224,11 +3227,11 @@ SFXMacro4A:
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro4B:
-    db 3
+	db 3
 	db 2, $00, $F0, $80, $62
 	db 1, $00, $50, $80, $45
 	db 2, $00, $F0, $80, $46
-    db 1, $00, $50, $80, $47
+	db 1, $00, $50, $80, $47
 	db 2, $00, $F0, $80, $60
 	db 1, $00, $50, $80, $61
 	db 2, $00, $F0, $80, $62
@@ -3244,7 +3247,7 @@ SFXMacro4C:
 	db 2, $C0, $C0, $85, $46
 	db 2, $80, $F0, $85, $3C
 	db 4, $40, $C0, $85, $32
-    db 6, $00, $90, $85, $28
+	db 6, $00, $90, $85, $28
 	db 8, $40, $70, $85, $1E
 	db 10, $80, $30, $85, $14
 	db 12, $C0, $10, $85, $0A
@@ -3260,7 +3263,7 @@ SFXMacro4D:
 	db 4, $40, $C0, $85, $3E
 	db 6, $00, $90, $85, $34
 	db 8, $40, $70, $85, $2A
-    db 10, $80, $30, $85, $20
+	db 10, $80, $30, $85, $20
 	db 12, $C0, $10, $85, $16
 	db $FE
 	dw SFXMacro5CLoop
@@ -3276,7 +3279,7 @@ SFXMacro4F:
 	db 0
 	db 2, $00, $20, $87, $75
 	db 2, $00, $40, $87, $75
-    db 2, $00, $80, $87, $75
+	db 2, $00, $80, $87, $75
 	db 2, $00, $F0, $87, $75
 	db 2, $00, $E0, $87, $8C
 	db 2, $00, $D0, $87, $8A
@@ -3292,7 +3295,7 @@ SFXMacro4F:
 	db 4, $00, $30, $87, $7E
 	db 4, $00, $20, $87, $7C
 	db 4, $00, $10, $87, $7A
-    db 1, $00, $00, $00, $00
+	db 1, $00, $00, $00, $00
 	db $FF
 SFXMacro50:
 	db 1
@@ -3301,7 +3304,7 @@ SFXMacro50:
 	db 2, $00, $80, $87, $7A
 	db 2, $00, $F0, $87, $7A
 	db 2, $00, $00, $00, $00
-    db 2, $00, $E0, $87, $8C
+	db 2, $00, $E0, $87, $8C
 	db 2, $00, $D0, $87, $8A
 	db 2, $00, $C0, $87, $88
 	db 2, $00, $B0, $87, $86
@@ -3326,7 +3329,7 @@ SFXMacro51:
 	db 2, $80, $A0, $83, $0E
 	db 2, $40, $C0, $86, $0F
 	db 2, $00, $E0, $83, $10
-    db 2, $40, $F0, $86, $11
+	db 2, $40, $F0, $86, $11
 	db 2, $80, $E0, $83, $12
 	db 2, $C0, $C0, $86, $13
 	db 2, $80, $A0, $83, $14
@@ -3342,7 +3345,7 @@ SFXMacro51:
 	dw SFXMacro5CLoop
 SFXMacro52:
 	db 0
-    db 2, $00, $20, $83, $0F
+	db 2, $00, $20, $83, $0F
 	db 2, $40, $40, $86, $10
 	db 2, $80, $60, $83, $11
 	db 2, $C0, $80, $86, $12
@@ -3358,11 +3361,11 @@ SFXMacro52:
 	db 2, $40, $60, $83, $1C
 	db 2, $80, $50, $86, $1D
 	db 2, $C0, $40, $83, $1E
-    db 2, $80, $30, $86, $1F
+	db 2, $80, $30, $86, $1F
 	db 2, $40, $20, $83, $20
 	db 2, $00, $10, $86, $21
 	db $FE
-    dw SFXMacro5CLoop
+	dw SFXMacro5CLoop
 SFXMacro53:
 	db 3
 	db 10, $00, $F3, $80, $62
@@ -3374,7 +3377,7 @@ SFXMacro53:
 	db 5, $00, $F3, $80, $47
 	db 9, $00, $F3, $80, $62
 	db 18, $00, $F3, $80, $46
-    db 150, $00, $F7, $80, $62
+	db 150, $00, $F7, $80, $62
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro54:
@@ -3390,7 +3393,7 @@ SFXMacro54:
 	db 7, $00, $F2, $80, $61
 	db 9, $00, $F2, $80, $64
 	db 6, $00, $F2, $80, $47
-    db 6, $00, $F2, $80, $62
+	db 6, $00, $F2, $80, $62
 	db 7, $00, $F2, $80, $61
 	db 2, $00, $F2, $80, $45
 	db 9, $00, $F2, $80, $60
@@ -3406,7 +3409,7 @@ SFXMacro55:
 	db 8, $80, $F1, $82, $23
 	db 12, $80, $F1, $82, $23
 	db 3, $80, $F1, $82, $23
-    db 18, $80, $F1, $82, $23
+	db 18, $80, $F1, $82, $23
 	db 6, $80, $F1, $82, $23
 	db 12, $80, $F1, $82, $23
 	db 7, $80, $F1, $82, $23
@@ -3422,7 +3425,7 @@ SFXMacro55:
 SFXMacro56:
 	db 3
 	db 1, $00, $F0, $80, $47
-    db 1, $00, $80, $80, $47
+	db 1, $00, $80, $80, $47
 	db 1, $00, $10, $80, $47
 	db 4, $00, $F0, $80, $35
 	db 1, $00, $80, $80, $35
@@ -3438,7 +3441,7 @@ SFXMacro56:
 SFXMacro57:
 	db 1
 	db 3, $00, $00, $00, $00
-    db 4, $80, $F0, $80, $9D
+	db 4, $80, $F0, $80, $9D
 	db $FE
 	dw SFXMacro5CLoop
 SFXMacro58:
@@ -3470,7 +3473,7 @@ SFXMacro5A:
 	db 2, $80, $80, $84, $4F
 	db 2, $80, $C0, $84, $84
 	db 5, $80, $F0, $84, $B6
-    db 2, $80, $C0, $84, $E5
+	db 2, $80, $C0, $84, $E5
 	db 2, $80, $B0, $85, $12
 	db 2, $80, $A0, $85, $3C
 	db 2, $80, $90, $85, $64
@@ -3486,7 +3489,7 @@ SFXMacro5A:
 	dw SFXMacro5CLoop
 SFXMacro5B:
 	db 1
-    db 1, $80, $10, $82, $78
+	db 1, $80, $10, $82, $78
 	db 1, $80, $20, $82, $C7
 	db 1, $80, $30, $83, $12
 	db 1, $80, $40, $83, $59
@@ -3502,7 +3505,7 @@ SFXMacro5B:
 	db 2, $80, $90, $85, $64
 	db 2, $80, $80, $86, $B2
 	db 2, $80, $70, $85, $89
-    db 2, $80, $60, $86, $C5
+	db 2, $80, $60, $86, $C5
 	db 2, $80, $50, $85, $AD
 	db 2, $80, $40, $86, $D7
 	db 2, $80, $30, $85, $CE
@@ -3521,7 +3524,7 @@ SFXMacro5D:
 	db $FF
 SFXMacro5E:
 	db 2
-    db 1, $00, $00, $00, $00
+	db 1, $00, $00, $00, $00
 	db $FF
 SFXMacro5F:
 	db 3
@@ -3565,19 +3568,19 @@ GardenA:
 	db $62
 	dw GardenA
 GardenB:
-    db $64, $09, -27, 2
+	db $64, $09, -27, 2
 	db $64, $0A, -27, 1
 	db $64, $09, -25, 2
 	db $64, $0A, -25, 1
-    db $64, $0B, -23, 2
+	db $64, $0B, -23, 2
 	db $64, $0C, -23, 1
 	db $64, $0D, -27, 2
 	db $64, $0E, -27, 2
-    db $64, $0F, -27, 1
+	db $64, $0F, -27, 1
 	db $64, $0E, -27, 1
 	db $64, $10, -27, 2
 	db $64, $10, -22, 2
-    db $64, $0D, -22, 2
+	db $64, $0D, -22, 2
 	db $64, $0C, -18, 1
 	db $62
 	dw GardenB
@@ -3592,7 +3595,7 @@ GardenC:
 	db $64, $15, -15, 2
 	db $64, $16, -15, 1
 	db $62
-    dw GardenC
+	dw GardenC
 GardenD:
 	db $64, $17, 0, 4
 	db $64, $18, 0, 8
@@ -4316,7 +4319,7 @@ Level100CompleteA:
 	db $67, %11111111
 	db $69, 245
 	db $64, $19, -40, 1
-    db $66, 1
+	db $66, 1
 	db $61
 Level100CompleteB:
 	db $64, $1A, -40, 1
@@ -4421,7 +4424,7 @@ Game100CompleteA:
 Game100CompleteB:
 	db $64, $1D, -31, 1
 	db $24, $02
-    db $61
+	db $61
 Game100CompleteC:
 	db $64, $1E, -19, 1
 	db $24, $02
@@ -4725,7 +4728,7 @@ CityA:
 	db $69, 175
 	db $64, $23, -29, 1
 	db $64, $27, -29, 1
-    db $66, $01
+	db $66, $01
 	db $62
 	dw CityA
 CityB:
@@ -4734,14 +4737,14 @@ CityB:
 	db $62
 	dw CityB
 CityC:
-    db $64, $25, -17, 1
+	db $64, $25, -17, 1
 	db $64, $29, -17, 1
 	db $62
 	dw CityC
 CityD:
 	db $64, $26, 0, 8
 	db $62
-    dw CityD
+	dw CityD
 SongMacro23:
 	db $34, $D6
 	db $34, $D6
@@ -5871,7 +5874,7 @@ EnvSeq01:
 	db $00, 6
 	db $40, 12
 	db $30, 20
-    db $00, 6
+	db $00, 6
 	db $30, 10
 	db $20, 20
 	db $00, 6
@@ -5890,7 +5893,7 @@ EnvSeq03:
 	db $20, 8
 	db $40, 8
 	db $50, 4
-    db $40, 64
+	db $40, 64
 	db $20, 32
 	db $00, 1
 	db $FF
@@ -5920,7 +5923,7 @@ EnvSeq07:
 	db $90, 1
 	db $80, 3
 	db $70, 60
-    db $10, 60
+	db $10, 60
 	db $00, 1
 	db $FF
 EnvSeq08:
@@ -5969,7 +5972,7 @@ EnvSeq0C:
 	db $FF
 EnvSeq0D:
 	db $20, 5
-    db $40, 30
+	db $40, 30
 	db $60, 240
 	db $00, 1
 	db $FF
@@ -6070,15 +6073,15 @@ VibSeq03:
 	db $7E
 VibSeq04:
 	db 3, 3
-    db -3, 3
-	db -3, 3
-	db 3, 3
-	db 3, 3
 	db -3, 3
 	db -3, 3
 	db 3, 3
 	db 3, 3
-    db -3, 3
+	db -3, 3
+	db -3, 3
+	db 3, 3
+	db 3, 3
+	db -3, 3
 	db -3, 2
 	db 3, 3
 	db $7D
@@ -6188,7 +6191,7 @@ ModSeq02:
 	db $FF
 	dw ModSeq02
 ModSeq03:
-    db 4, 12
+	db 4, 12
 	db 4, 0
 	db 4, 12
 	db 4, 0
@@ -6207,7 +6210,7 @@ ModSeq04:
 	dw ModSeq04
 ModSeq05:
 	db 1, 4
-    db 1, 7
+	db 1, 7
 	db 1, 12
 	db 1, 4
 	db 1, 7
@@ -6226,7 +6229,7 @@ ModSeq06:
 ModSeq07:
 	db 6, 0
 	db 6, 4
-    db 6, 7
+	db 6, 7
 	db 6, 12
 	db 6, 16
 	db 6, 19
@@ -6234,7 +6237,7 @@ ModSeq07:
 	db 6, 28
 	db 6, 31
 	db 6, 28
-    db 6, 24
+	db 6, 24
 	db 6, 19
 	db 6, 16
 	db 6, 12
@@ -6253,7 +6256,7 @@ ModSeq08:
 	dw ModSeq08
 ModSeq09:
 	db 12, 0
-    db 3, -1
+	db 3, -1
 	db 3, -2
 	db 3, -3
 	db 3, -4
@@ -6261,7 +6264,7 @@ ModSeq09:
 	db 3, -6
 	db 3, -7
 	db 3, -8
-    db 3, -9
+	db 3, -9
 	db 3, -10
 	db 3, -11
 	db 3, -12
@@ -6269,7 +6272,7 @@ ModSeq09:
 	db 3, -14
 	db 3, -15
 	db 3, -16
-    db 3, -17
+	db 3, -17
 	db 3, -18
 	db 3, -19
 	db 3, -20
@@ -6277,7 +6280,7 @@ ModSeq09:
 	db 3, -22
 	db 3, -23
 	db 200, -24
-    db $FF
+	db $FF
 	dw ModSeq09
 ModSeq0A:
 	db 5, 12
