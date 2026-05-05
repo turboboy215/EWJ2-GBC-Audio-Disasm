@@ -4,9 +4,9 @@
 
 include "HARDWARE.INC"
 
-AudioROM equ $4000
-AudioRAM equ $DF00
-WaveRAM equ $FF30
+def AudioROM equ $4000
+def AudioRAM equ $DF00
+def WaveRAM equ $FF30
 
 SECTION "Audio1", ROMX[$4000], BANK[$1]
 
@@ -397,11 +397,11 @@ ChannelInit:
 	ld [C3MacroTrans], a
 	ld [C4MacroTrans], a
 	
-	;Disable macro times
-	ld [C1MacroTimes], a
-	ld [C2MacroTimes], a
-	ld [C3MacroTimes], a
-	ld [C4MacroTimes], a
+	;Clear macro flag
+	ld [C1InMacro], a
+	ld [C2InMacro], a
+	ld [C3InMacro], a
+	ld [C4InMacro], a
 	
 	;Also disable Ch4 vibrato sequence
 	ld [C4VibSeqDelay], a
@@ -1613,7 +1613,7 @@ EventMacro:
 	ld a, [bc]
 	ld [de], a
 	inc de
-	;Now check the macro times in RAM
+	;Now check the macro flag in RAM
 	ld a, [de]
 	and a
 	;If 0, then get the times in macro
@@ -1697,7 +1697,7 @@ EventMacroRetEnd:
 	;Reset macro transpose to 0
 	inc de
 	ld a, 0
-	;And macro times to 0
+	;And macro flag to 0
 	ld [de], a
 	inc de
 	ld [de], a
@@ -6882,7 +6882,7 @@ InsTab:
 	dw InsRest
 	dw InsBassDrum
 	dw InsSnare
-	dw InsHiHatO
+	dw InsHiHatC
 	dw InsHiHatP
 	dw InsHiHatO
 	dw InsCymbal
@@ -6900,11 +6900,11 @@ InsTab:
 	dw InsSweep3
 	dw InsArp7
 	dw InsArp12
-	dw InsSweep3
+	dw InsSweep4
 	dw InsDoNotUse1
 	dw InsDoNotUse2
 	dw InsDoNotUse3
-	dw InsSweep4
+	dw InsSweep5
 	dw InsArpTrem
 	dw InsBell2
 	dw InsSlideDown1
@@ -6969,7 +6969,7 @@ InsSnare:
 	db 0
 	;Pitch mod ptr
 	dw 0
-InsHiHatO:
+InsHiHatC:
 	;Period ctrl
 	db $C0
 	;Duty
@@ -7311,7 +7311,7 @@ InsArp12:
 	db 1
 	;Pitch mod ptr
 	dw ModSeq05
-InsSweep3:
+InsSweep4:
 	;Period ctrl
 	db $80
 	;Duty
@@ -7333,7 +7333,7 @@ InsSweep3:
 InsDoNotUse1:
 InsDoNotUse2:
 InsDoNotUse3:
-InsSweep4:
+InsSweep5:
 	;Period ctrl
 	db $C0
 	;Duty
@@ -7958,7 +7958,7 @@ C1ModSeqDelay: ds 1
 C1ModSeq: ds 2
 C1MacroTimesLeft: ds 1
 C1MacroTrans: ds 1
-C1MacroTimes: ds 1
+C1InMacro: ds 1
 C1MacroRet: ds 2
 C2PlayFlag: ds 1
 C2Len: ds 1
@@ -7976,7 +7976,7 @@ C2ModSeqDelay: ds 1
 C2ModSeq: ds 2
 C2MacroTimesLeft: ds 1
 C2MacroTrans: ds 1
-C2MacroTimes: ds 1
+C2InMacro: ds 1
 C2MacroRet: ds 2
 C3PlayFlag: ds 1
 C3Len: ds 1
@@ -7994,7 +7994,7 @@ C3ModSeqDelay: ds 1
 C3ModSeq: ds 2
 C3MacroTimesLeft: ds 1
 C3MacroTrans: ds 1
-C3MacroTimes: ds 1
+C3InMacro: ds 1
 C3MacroRet: ds 2
 C4PlayFlag: ds 1
 C4Len: ds 1
@@ -8012,7 +8012,7 @@ C4ModSeqDelay: ds 1
 C4ModSeq: ds 2
 C4MacroTimesLeft: ds 1
 C4MacroTrans: ds 1
-C4MacroTimes: ds 1
+C4InMacro: ds 1
 C4MacroRet: ds 2
 NoteLens: ds 2
 CurRestartPos: ds 2
