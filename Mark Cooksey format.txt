@@ -1,0 +1,228 @@
+The Song Table
+=======================================
+The table consists of a series of five 16-bit values which each make up a "song". The first four values represent the starting point for each channel, while the fifth value represents a pointer to the note length table (see below).
+The table's location is found with the following series of instructions:
+
+;Get song number from A
+	ld l, a
+	ld h, $00
+	
+	;Get song address
+	;x10 bytes = Song entry length
+	add hl, hl
+	ld d, h
+	ld e, l
+	add hl, hl
+	add hl, hl
+	add hl, de	
+	;Add to the song table
+	ld de, SongTab
+
+In hex values, this equates to:
+6F 26 00 29 54 5D 29 29 19 11 ?? ??
+
+Note Length Tables
+=======================================
+Note length tables are a series of 16-byte tables that specify various note lengths. This table is shared between all instruments at once. The table pointer can be changed via a command (see below).
+
+The Instrument Table
+=======================================
+The table consists of a series of up to 32 arrays of values, the last 16 which are accessed using a flag. The instrument table is found with the following series of instructions:
+	;Shift left to calculate the instrument offset (12 x instrument number)
+	srl a
+	srl a
+	srl a
+	;Add the extra 32 bytes if present
+	add d
+	
+	;Get the current instrument offset in table
+	push hl
+	ld hl, InsTab
+
+In hex values, this equates to:
+CB 3F CB 3F CB 3F 82 E5 21 ?? ??
+
+Each instrument is 12 bytes:
+1 = Period control
+2 = Duty
+3 = Initial volume/envelope
+4 = Delay before volume/envelope sequence, 0 if unused (see below)
+5-6 = Pointer to volume/envelope sequence, 0 if unused
+7 = Delay before vibrato sequence, 0 if unused
+8-9 = Pointer to vibrato sequence, 0 if unused
+A = Delay before pitch modulation sequence, 0 if unused
+B-C = Pointer to pitch modulation sequence, 0 if unused
+
+Note that the last 2 values only have an effect on channels 1-3. Additionally, the last 2 values are non-functional in earlier games, and channel 3 is only functional in late games.
+
+Each instrument can have 3 "sequences" which are a series of values that are altered after various delays following the main delay referenced in the instrument. Delays are in terms of frames.
+
+Envelope control sequences work as follows:
+[repeat]
+ 1. Duration (in frames)
+		FF = Sequence end
+ 2. Envelope data
+[end]
+
+For vibrato control sequences:
+[repeat]
+ 1. Duration (in frames)
+		7E = Sequence end (FF in earlier games)
+		7D xx xx = Jump to position (not available in earlier games)
+ 2. Pitch/tuning up/down (relative, signed)
+(NOTE: Channel 4 erroneously checks for the end flag FF in the code in some games.)
+
+For pitch modulation sequences:
+[repeat]
+ 1. Duration (in frames)
+		FF = Sequence end
+		FE xx xx = Jump to position (not available in earlier games)
+ 2. Pitch up/down (in whole notes)
+
+Pitch modulation can be used to create effects like arpeggio (rapidly changing note pitches to simulate chords) and tom-tom drums. Many GBC games have an instrument that plays an ascending and descending note scale in major or minor.
+
+Song Format
+=======================================
+Usually, the notes of songs are played through "macro" sequences of notes that are repeated with various parameters. These are played via the command 64, and are referenced from the macro table (see below).
+
+Notes are stored as follows, in binary:
+
+axxxxxxx yyyyzzzz
+
+A = If set, then the instrument count starts with 16
+X = Note value (00-5F)
+Y = Instrument
+Z = Note length (index of the current note length table)
+
+Commands are as follows:
+60 xy = Hold note (X = Instrument (unused), Y = Note length (same as above))
+61 = Stop channel
+62 xx xx = Jump to position (X = Position) (Used for looping)
+63 xx = Set noise frequency value (NR43)
+64 xx yy zz = Go to macro (X = Sequence number - see below, Y = Transpose, Z = Number of times) (Note: 1 level only)
+65 = Return from macro
+66 xx = Set conditional flag (X = Value, not used by the driver)
+67 xx = Set global panning
+68 xx xx = Set note length value table pointer (X = Pointer) (Affects all channels)
+69 xx = Set song tempo
+6A xx = Set channel 1 panning
+6B xx = Set channel 2 panning
+6C xx = Set channel 3 panning
+6D xx = Set channel 4 panning
+
+(NOTE: Only commands 60 through 67 are available in earlier games.)
+
+The Macro Table
+=======================================
+Like the song table, the macro table is comprised of 16-bit pointer values. The macro table can be found using one of two methods (from command 60), depending on the game:
+
+Old method (for games pre-1999):
+
+	;Set channel length to 1
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
+	;Then get macro number from parameter byte
+	inc bc
+	ld a, [bc]
+	;Multiply by 2
+	sla a
+	;Add to macro table
+	ld de, SongMacroTab
+	add e
+	ld e, a
+	jr nc, .EventMacro2
+
+In hex, this code reads as follows:
+E1 11 FE FF 19 3E 01 22 03 0A CB 27 11 ?? ??
+
+New method (for games 1999-):
+
+	;Set channel length to 1
+	pop hl
+	ld de, -2
+	add hl, de
+	ld a, 1
+	ld [hl+], a
+	;Then get macro number from parameter byte
+	inc bc
+	ld a, [bc]
+	sla a
+	jr nc, .EventMacro2
+	;Add to macro table
+	ld de, SongMacroTab
+	inc d
+	jr .EventMacro3
+
+In hex, this code reads as follows:
+CB 27 30 06 11 ?? ?? 14 18 03
+
+Sound Effects Table
+=======================================
+This table is a series of 4-byte entries which specify a number from a table (see below) for up to 4 macros to be played simultaneously; ideally, one should be played per channel, but unlike songs, they can be listed in any order, since their channel number is determined with the first byte of the macro (see below). If any of these values is FF, then the slot is unused.
+The table can be found using the following code:
+;Get SFX from number
+LoadSFX:
+	add a
+	add a
+	ld hl, SFXTab
+	add l
+	ld l, a
+	jr nc, GetSFX
+
+	inc h
+
+In hex, this code reads as follows:
+87 87 21 ?? ?? 85 6F 30 01 24
+
+Sound Effects Macro Table
+=======================================
+Another table comprised of 16-bit pointer values. The macro table can be found using the following method:
+
+	;Get SFX macro pointer from table
+	ld hl, SFXMacroTab
+	sla a
+	add l
+	ld l, a
+	jr nc, InitSFX
+
+	inc h
+
+In hex, this code reads as follows:
+21 ?? ?? CB 27 85 6F 30
+
+Sound Effects Macro Format
+=======================================
+Macros for each sound effect consist of a series of direct writes to audio registers. They are comprised as follows:
+
+1. Channel number (0-3)
+[Repeat]
+1. Delay before next event (in frames)
+	FF = Macro end
+2. NRx1 value (Channel length/duty)
+3. NRx2 value (Volume/envelope)
+4. NRx4 value (Period high/control)
+5. NRx5 value (Period low)
+
+Waveform
+=======================================
+There is only one waveform pattern per game which is only loaded when the driver is first initialized. (Since Woody Woodpecker and the cancelled Resident Evil play a sample before any other audio is heard, this overrides the wave channel with the last part of the sample and causes the wave channel to be completely silent throughout the game.)
+
+This is found with the following instructions:
+
+	;Copy the waveform into wave RAM
+	ld de, WaveRAM
+	ld hl, Waveform
+	ld b, $10
+
+In hex, this code reads as follows:
+11 30 FF 21 ?? ?? 06 10
+
+Dragon's Lair: The Legend, the first game to use the driver in its earliest iteration, doesn't initialize wave RAM and relies on the "default" values when the Game Boy is powered on. Since the Game Boy Color has different default values, channel 3 sounds different and higher-pitched on GBC systems and later.
+Earlier games use the following wave pattern:
+FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00
+
+For later games, the waveform is as follows:
+AA AA AA AA AA AA AA AA 00 00 00 00 00 00 00 00
