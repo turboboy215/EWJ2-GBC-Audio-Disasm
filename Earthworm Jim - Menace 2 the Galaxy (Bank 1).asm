@@ -1166,7 +1166,7 @@ GetFreq:
 	ld d, a
 	;And get current note again
 	ld a, [bc]
-	;Mask off the highest bit
+	;Mask out the highest bit
 	and %01111111
 	;Add the transpose
 	add d
@@ -1187,7 +1187,7 @@ GetFreq:
 GetLen:	
 	inc bc
 	ld a, [bc]
-	;Mask off the upper 4 bits to get the note length index
+	;Mask out the upper 4 bits to get the note length index
 	and %00001111
 	push hl
 	;Get the address of the current note length
@@ -1222,7 +1222,7 @@ GetInst:
 	ld a, [bc]
 	;Mask out the lower 4 bits to get the instrument number
 	and %11110000
-	;Shift right to calculate the instrument offset (2 x instrument number)
+	;Shift right to calculate the instrument offset (12 x instrument number)
 	srl a
 	srl a
 	srl a
@@ -1484,8 +1484,8 @@ GetVCMD:
 
 EventTie:
 ;Delay the next note by length, increasing note length
+;Parameters: -x (- = unused, x = length)
 	;Get the note lengths pointer
-	;Parameters: -x (- = unused, x = length)
 	ld hl, NoteLens+1
 	ld a, [hl]
 	dec hl
@@ -1562,7 +1562,7 @@ EventNoise:
 
 EventMacro:
 ;Go to a macro (subroutine) with transpose for specified number of times
-;Parameters: xxxx yy zz (X = Pointer, Y = Transpose, Z = Number of times)
+;Parameters: xx yy zz (X = Macro number, Y = Transpose, Z = Number of times)
 ;(Note: 1 level only)
 	;Set channel length to 1
 	pop hl
@@ -1648,7 +1648,7 @@ EventMacro:
 	jp GotoRestart
 
 EventMacroRet:
-	;Reset macro transpose to 0
+;Return from the current macro
 	inc bc
 	;Set channel length flag to 1
 	pop hl
@@ -1712,8 +1712,8 @@ EventMacroRetEnd:
 	jp GotoRestart
 
 EventCondFlag:
-	;Set a conditional flag (not used by the driver)
-	;Parameters: xx (X = Value)
+;Set a conditional flag (not used by the driver)
+;Parameters: xx (X = Value)
 	inc bc
 	ld a, [bc]
 	ld [LoopFlag], a
@@ -1729,8 +1729,8 @@ EventCondFlag:
 	jp GotoRestart
 
 EventGlobalPan:
-	;Set global panning
-	;Parameters: xx (X = Value, see NR51 usage)
+;Set global panning
+;Parameters: xx (X = Value, see NR51 usage)
 	inc bc
 	ld a, [bc]
 	ldh [rNR51], a
