@@ -1,4 +1,6 @@
 # EWJ2-GBC-Audio-Disasm
 Earthworm Jim: Menace 2 the Galaxy (Game Boy Color) audio disassembly
 
-A disassembly of the sound engine and data from Earthworm Jim: Menace 2 the Galaxy for Game Boy Color, fully labeled and commented. Can be built with RGBDS; the sound data of the resulting ROMs are verified to match the sound data from the original ROM exactly. Currently, it is not possible to build all three sound banks at once, since they share the same labels. Also note that the resulting ROMs on their own are not playable, as no additional code is included. This game uses a later version of the sound engine in Aladdin (monochrome version); see https://github.com/turboboy215/Aladdin-GB-Audio-Disasm for a text file which documents how the music, sound effect, and instrument data is structured for these games as well as other games using versions of the same sound engine.
+A disassembly of the sound engine and data from Earthworm Jim: Menace 2 the Galaxy for Game Boy Color, fully labeled and commented. Can be built with RGBDS; the sound data of the resulting ROMs are verified to match the sound data from the original ROM exactly. The resulting ROM includes a custom player where all the music and sound effects can be heard. 
+
+This game uses a later version of the sound engine in Aladdin (monochrome version); see https://github.com/turboboy215/Aladdin-GB-Audio-Disasm for a text file which documents how the music, sound effect, and instrument data is structured for these games as well as other games using versions of the same sound engine.
